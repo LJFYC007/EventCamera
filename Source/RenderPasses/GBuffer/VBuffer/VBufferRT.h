@@ -69,6 +69,8 @@ private:
     bool mComputeDOF = false;
     ref<SampleGenerator> mpSampleGenerator;
 
+    float3 movement = float3(0.0f, 0.0f, 0.0f);
+
     // UI variables
 
     bool mUseTraceRayInline = false;

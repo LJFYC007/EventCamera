@@ -43,6 +43,7 @@ namespace
     const std::string kInputMotionVectors = "mvec";
     const std::string kInputViewDir = "viewW";
     const std::string kInputSampleCount = "sampleCount";
+    const std::string kMovement = "movement";
 
     const Falcor::ChannelList kInputChannels =
     {
@@ -451,6 +452,11 @@ void PathTracer::execute(RenderContext* pRenderContext, const RenderData& render
     // Update shader program specialization.
     updatePrograms();
 
+    float3 movement = renderData.getDictionary()[kMovement];
+    float3 cameraPos = mpScene->getCamera()->getPosition();
+    mpScene->getCamera()->setPosition(cameraPos + movement);
+    mpScene->getCamera()->getData();
+
     // Prepare resources.
     prepareResources(pRenderContext, renderData);
 
@@ -484,6 +490,9 @@ void PathTracer::execute(RenderContext* pRenderContext, const RenderData& render
     resolvePass(pRenderContext, renderData);
 
     endFrame(pRenderContext, renderData);
+
+    mpScene->getCamera()->setPosition(cameraPos);
+    mpScene->getCamera()->getData();
 }
 
 void PathTracer::renderUI(Gui::Widgets& widget)
@@ -665,10 +674,7 @@ bool PathTracer::renderDebugUI(Gui::Widgets& widget)
         dirty |= group.checkbox("Use fixed seed", mParams.useFixedSeed);
         group.tooltip("Forces a fixed random seed for each frame.\n\n"
             "This should produce exactly the same image each frame, which can be useful for debugging.");
-        if (mParams.useFixedSeed)
-        {
-            dirty |= group.var("Seed", mParams.fixedSeed);
-        }
+        dirty |= group.var("Seed", mParams.fixedSeed);
 
         mpPixelDebug->renderUI(group);
     }
@@ -1246,7 +1252,7 @@ bool PathTracer::beginFrame(RenderContext* pRenderContext, const RenderData& ren
     mpPixelDebug->beginFrame(pRenderContext, mParams.frameDim);
 
     // Update the random seed.
-    mParams.seed = mParams.useFixedSeed ? mParams.fixedSeed : mParams.frameCount;
+    mParams.seed = mParams.useFixedSeed ? mParams.fixedSeed : mParams.frameCount * 337 + mParams.fixedSeed;
 
     mUpdateFlags = IScene::UpdateFlags::None;
 

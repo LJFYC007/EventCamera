@@ -43,6 +43,7 @@ const std::string kInputChannelReferenceImage = "Reference";
 const std::string kOutputChannelImage = "Output";
 
 // Serialized parameters
+const std::string kMulti = "multi";
 const std::string kReferenceImagePath = "ReferenceImagePath";
 const std::string kMeasurementsFilePath = "MeasurementsFilePath";
 const std::string kIgnoreBackground = "IgnoreBackground";
@@ -88,6 +89,8 @@ ErrorMeasurePass::ErrorMeasurePass(ref<Device> pDevice, const Properties& props)
             mRunningErrorSigma = value;
         else if (key == kSelectedOutputId)
             mSelectedOutputId = value;
+        else if (key == kMulti)
+            multi = value;
         else
         {
             logWarning("Unknown property '{}' in ErrorMeasurePass properties.", key);
@@ -114,6 +117,7 @@ Properties ErrorMeasurePass::getProperties() const
     props[kReportRunningError] = mReportRunningError;
     props[kRunningErrorSigma] = mRunningErrorSigma;
     props[kSelectedOutputId] = mSelectedOutputId;
+    props[kMulti] = multi;
     return props;
 }
 
@@ -195,6 +199,7 @@ void ErrorMeasurePass::runDifferencePass(RenderContext* pRenderContext, const Re
     // Set constant buffer parameters.
     const uint2 resolution = uint2(pSourceTexture->getWidth(), pSourceTexture->getHeight());
     var[kConstantBufferName]["gResolution"] = resolution;
+    var[kConstantBufferName]["gMulti"] = multi;
     // If the world position texture is unbound, then don't do the background pixel check.
     var[kConstantBufferName]["gIgnoreBackground"] = (uint32_t)(mIgnoreBackground && pWorldPositionTexture);
     var[kConstantBufferName]["gComputeDiffSqr"] = (uint32_t)mComputeSquaredDifference;
@@ -277,6 +282,9 @@ void ErrorMeasurePass::renderUI(Gui::Widgets& widget)
         widget.radioButtons(sOutputSelectionButtonsSourceOnly, dummyId);
     }
 
+    widget.var("Multiplier", multi, 4.0f, 32.0f, 1.0f);
+
+    /*
     widget.checkbox("Ignore background", mIgnoreBackground);
     widget.tooltip(
         "Do not include background pixels in the error measurements.\n"
@@ -337,6 +345,7 @@ void ErrorMeasurePass::renderUI(Gui::Widgets& widget)
     {
         widget.text("Error: N/A");
     }
+    */
 }
 
 bool ErrorMeasurePass::onKeyEvent(const KeyboardEvent& keyEvent)

@@ -36,6 +36,7 @@ const std::string kProgramRaytraceFile = "RenderPasses/GBuffer/VBuffer/VBufferRT
 const std::string kProgramComputeFile = "RenderPasses/GBuffer/VBuffer/VBufferRT.cs.slang";
 
 // Scripting options.
+const char kMovement[] = "movement";
 const char kUseTraceRayInline[] = "useTraceRayInline";
 const char kUseDOF[] = "useDOF";
 
@@ -91,6 +92,7 @@ RenderPassReflection VBufferRT::reflect(const CompileData& compileData)
 
 void VBufferRT::execute(RenderContext* pRenderContext, const RenderData& renderData)
 {
+    renderData.getDictionary()[kMovement] = movement;
     GBufferBase::execute(pRenderContext, renderData);
 
     // Update frame dimension based on render pass output.
@@ -110,6 +112,9 @@ void VBufferRT::execute(RenderContext* pRenderContext, const RenderData& renderD
         // Configure depth-of-field.
         // When DOF is enabled, two PRNG dimensions are used. Pass this info to subsequent passes via the dictionary.
         mComputeDOF = mUseDOF && mpScene->getCamera()->getApertureRadius() > 0.f;
+        float3 cameraPos = mpScene->getCamera()->getPosition();
+        mpScene->getCamera()->setPosition(cameraPos + movement);
+        mpScene->getCamera()->getData();
         if (mUseDOF)
         {
             renderData.getDictionary()[Falcor::kRenderPassPRNGDimension] = mComputeDOF ? 2u : 0u;
@@ -118,6 +123,8 @@ void VBufferRT::execute(RenderContext* pRenderContext, const RenderData& renderD
         mUseTraceRayInline ? executeCompute(pRenderContext, renderData) : executeRaytrace(pRenderContext, renderData);
         mUpdateFlags = IScene::UpdateFlags::None;
         mFrameCount++;
+        mpScene->getCamera()->setPosition(cameraPos);
+        mpScene->getCamera()->getData();
     }
     else // If there is no scene, clear the output and return.
     {
@@ -136,6 +143,11 @@ void VBufferRT::renderUI(Gui::Widgets& widget)
         mOptionsChanged = true;
     }
 
+    if (widget.var("Movement distance", movement, -1.0f, 1.0f, 0.01f))
+    {
+        mOptionsChanged = true;
+    }
+
     if (widget.checkbox("Use depth-of-field", mUseDOF))
     {
         mOptionsChanged = true;
@@ -150,6 +162,7 @@ void VBufferRT::renderUI(Gui::Widgets& widget)
 Properties VBufferRT::getProperties() const
 {
     Properties props = GBufferBase::getProperties();
+    props[kMovement] = movement;
     props[kUseTraceRayInline] = mUseTraceRayInline;
     props[kUseDOF] = mUseDOF;
 
@@ -170,7 +183,9 @@ void VBufferRT::parseProperties(const Properties& props)
 
     for (const auto& [key, value] : props)
     {
-        if (key == kUseTraceRayInline)
+        if (key == kMovement)
+            movement = value;
+        else if (key == kUseTraceRayInline)
             mUseTraceRayInline = value;
         else if (key == kUseDOF)
             mUseDOF = value;

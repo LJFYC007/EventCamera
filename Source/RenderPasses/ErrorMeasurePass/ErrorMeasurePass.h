@@ -115,7 +115,9 @@ private:
     /// Coefficient used for the exponential moving average. Larger values mean slower response.
     float mRunningErrorSigma = 0.995f;
 
-    OutputId mSelectedOutputId = OutputId::Source;
+    float multi = 10.0f;
+
+    OutputId mSelectedOutputId = OutputId::Difference;
 
     static const Gui::RadioButtonGroup sOutputSelectionButtons;
     static const Gui::RadioButtonGroup sOutputSelectionButtonsSourceOnly;

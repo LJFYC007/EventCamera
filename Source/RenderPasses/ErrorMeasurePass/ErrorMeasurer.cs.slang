@@ -36,6 +36,7 @@ cbuffer PerFrameCB
     uint gIgnoreBackground;
     uint gComputeDiffSqr;
     uint gComputeAverage;
+    float gMulti;
 };
 
 [numthreads(16, 16, 1)]
@@ -45,6 +46,7 @@ void main(uint3 DTid: SV_DispatchThreadID)
     if (any(pixel >= gResolution))
         return;
 
+    /*
     // Determine if we should include this pixel or not.
     const float4 worldPos = gWorldPosition[pixel];
     const bool isForeground = worldPos.w != 0.0f; // We're using the w-component to identify valid pixels.
@@ -59,4 +61,14 @@ void main(uint3 DTid: SV_DispatchThreadID)
         diff.rgb = (diff.r + diff.g + diff.b) / 3.f;
 
     gResult[pixel] = float4(diff, 0.0f);
+    */
+
+    float sourceI = 0.299f * gSource[pixel].r + 0.587f * gSource[pixel].g + 0.114f * gSource[pixel].b;
+    float referenceI = 0.299f * gReference[pixel].r + 0.587f * gReference[pixel].g + 0.114f * gReference[pixel].b;
+    if (referenceI > sourceI * gMulti )
+        gResult[pixel] = float4(1.0f, 0.0f, 0.0f, 0.0f);
+    else if (referenceI * gMulti < sourceI )
+        gResult[pixel] = float4(0.0f, 1.0f, 0.0f, 0.0f);
+    else
+        gResult[pixel] = float4(0.0f);
 }
