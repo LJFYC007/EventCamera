@@ -65,10 +65,13 @@ void main(uint3 DTid: SV_DispatchThreadID)
 
     float sourceI = 0.299f * gSource[pixel].r + 0.587f * gSource[pixel].g + 0.114f * gSource[pixel].b;
     float referenceI = 0.299f * gReference[pixel].r + 0.587f * gReference[pixel].g + 0.114f * gReference[pixel].b;
+    /*
     if (referenceI > sourceI * gMulti )
         gResult[pixel] = float4(1.0f, 0.0f, 0.0f, 0.0f);
     else if (referenceI * gMulti < sourceI )
         gResult[pixel] = float4(0.0f, 1.0f, 0.0f, 0.0f);
     else
         gResult[pixel] = float4(0.0f);
+    */
+    gResult[pixel] = float4(float3(sourceI / referenceI), 0.0f);
 }
