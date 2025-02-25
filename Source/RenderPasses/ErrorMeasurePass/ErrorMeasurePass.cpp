@@ -27,6 +27,7 @@
  **************************************************************************/
 #include "ErrorMeasurePass.h"
 #include "Core/AssetResolver.h"
+#include "RenderGraph/RenderPassStandardFlags.h"
 #include <sstream>
 
 namespace
@@ -43,7 +44,6 @@ const std::string kInputChannelReferenceImage = "Reference";
 const std::string kOutputChannelImage = "Output";
 
 // Serialized parameters
-const std::string kMulti = "multi";
 const std::string kReferenceImagePath = "ReferenceImagePath";
 const std::string kMeasurementsFilePath = "MeasurementsFilePath";
 const std::string kIgnoreBackground = "IgnoreBackground";
@@ -89,8 +89,6 @@ ErrorMeasurePass::ErrorMeasurePass(ref<Device> pDevice, const Properties& props)
             mRunningErrorSigma = value;
         else if (key == kSelectedOutputId)
             mSelectedOutputId = value;
-        else if (key == kMulti)
-            multi = value;
         else
         {
             logWarning("Unknown property '{}' in ErrorMeasurePass properties.", key);
@@ -117,7 +115,6 @@ Properties ErrorMeasurePass::getProperties() const
     props[kReportRunningError] = mReportRunningError;
     props[kRunningErrorSigma] = mRunningErrorSigma;
     props[kSelectedOutputId] = mSelectedOutputId;
-    props[kMulti] = multi;
     return props;
 }
 
@@ -132,10 +129,53 @@ RenderPassReflection ErrorMeasurePass::reflect(const CompileData& compileData)
     return reflector;
 }
 
+void ErrorMeasurePass::setScene(RenderContext* pRenderContext, const ref<Scene>& pScene)
+{
+    mpScene = pScene;
+
+    // Reset accumulation when the scene changes.
+    reset();
+}
+
 void ErrorMeasurePass::execute(RenderContext* pRenderContext, const RenderData& renderData)
 {
+    // Query refresh flags passed down from the application and other passes.
+    auto& dict = renderData.getDictionary();
+    auto refreshFlags = dict.getValue(kRenderPassRefreshFlags, RenderPassRefreshFlags::None);
+
+    // If any refresh flag is set, we reset frame accumulation.
+    if (refreshFlags != RenderPassRefreshFlags::None)
+        reset();
+
+    // Reset accumulation upon all scene changes, except camera jitter and history changes.
+    if (mpScene)
+    {
+        auto sceneUpdates = mpScene->getUpdates();
+        if ((sceneUpdates & ~IScene::UpdateFlags::CameraPropertiesChanged) != IScene::UpdateFlags::None)
+        {
+            reset();
+        }
+        if (is_set(sceneUpdates, IScene::UpdateFlags::CameraPropertiesChanged))
+        {
+            auto excluded = Camera::Changes::Jitter | Camera::Changes::History;
+            auto cameraChanges = mpScene->getCamera()->getChanges();
+            if ((cameraChanges & ~excluded) != Camera::Changes::None)
+                reset();
+        }
+    }
+
     ref<Texture> pSourceImageTexture = renderData.getTexture(kInputChannelSourceImage);
     ref<Texture> pOutputImageTexture = renderData.getTexture(kOutputChannelImage);
+
+    const uint2 resolution = uint2(pSourceImageTexture->getWidth(), pSourceImageTexture->getHeight());
+    const bool resolutionMatch = pOutputImageTexture->getWidth() == resolution.x && pOutputImageTexture->getHeight() == resolution.y;
+
+    // Reset accumulation when resolution changes.
+    if (any(resolution != mFrameDim))
+    {
+        mFrameDim = resolution;
+        reset();
+    }
 
     // Create the texture for the difference image if this is our first
     // time through or if the source image resolution has changed.
@@ -165,7 +205,8 @@ void ErrorMeasurePass::execute(RenderContext* pRenderContext, const RenderData& 
     }
 
     runDifferencePass(pRenderContext, renderData);
-    runReductionPasses(pRenderContext, renderData);
+    mMeasurements.valid = true;
+    // runReductionPasses(pRenderContext, renderData);
 
     switch (mSelectedOutputId)
     {
@@ -196,14 +237,21 @@ void ErrorMeasurePass::runDifferencePass(RenderContext* pRenderContext, const Re
     var["gWorldPosition"] = pWorldPositionTexture;
     var["gResult"] = mpDifferenceTexture;
 
+    prepareAccumulation(pRenderContext, pSourceTexture->getWidth(), pSourceTexture->getHeight());
+
     // Set constant buffer parameters.
     const uint2 resolution = uint2(pSourceTexture->getWidth(), pSourceTexture->getHeight());
     var[kConstantBufferName]["gResolution"] = resolution;
-    var[kConstantBufferName]["gMulti"] = multi;
-    // If the world position texture is unbound, then don't do the background pixel check.
-    var[kConstantBufferName]["gIgnoreBackground"] = (uint32_t)(mIgnoreBackground && pWorldPositionTexture);
-    var[kConstantBufferName]["gComputeDiffSqr"] = (uint32_t)mComputeSquaredDifference;
-    var[kConstantBufferName]["gComputeAverage"] = (uint32_t)mComputeAverage;
+    var[kConstantBufferName]["gThreshold"] = threshold;
+    var[kConstantBufferName]["gAccumCount"] = mFrameCount;
+    var[kConstantBufferName]["gAccumulate"] = mEnabled;
+    var["gLastFrameSourceSum"] = mpLastFrameSourceSum;
+    var["gLastFrameReferenceSum"] = mpLastFrameReferenceSum;
+
+    if ( mFrameCount >= mMaxFrameCount )
+        mEnabled = false;
+    else
+        mEnabled = true, mFrameCount ++;
 
     // Run the compute shader.
     mpErrorMeasurerPass->execute(pRenderContext, resolution.x, resolution.y);
@@ -282,70 +330,18 @@ void ErrorMeasurePass::renderUI(Gui::Widgets& widget)
         widget.radioButtons(sOutputSelectionButtonsSourceOnly, dummyId);
     }
 
-    widget.var("Multiplier", multi, 4.0f, 32.0f, 1.0f);
-
-    /*
-    widget.checkbox("Ignore background", mIgnoreBackground);
-    widget.tooltip(
-        "Do not include background pixels in the error measurements.\n"
-        "This option requires the optional input '" +
-            std::string(kInputChannelWorldPosition) + "' to be bound",
-        true
-    );
-    widget.checkbox("Compute L2 error (rather than L1)", mComputeSquaredDifference);
-    widget.checkbox("Compute RGB average", mComputeAverage);
-    widget.tooltip(
-        "When enabled, the average error over the RGB components is computed when creating the difference image.\n"
-        "The average is computed after squaring the differences when L2 error is selected."
-    );
-
-    widget.checkbox("Use loaded reference image", mUseLoadedReference);
-    widget.tooltip(
-        "Take the reference from the loaded image instead or the input channel.\n\n"
-        "If the chosen reference doesn't exist, the error measurements are disabled.",
-        true
-    );
-    // Display the filename of the reference file.
-    const std::string referenceText = "Reference: " + getFilename(mReferenceImagePath);
-    widget.text(referenceText);
-    if (!mReferenceImagePath.empty())
+    if (widget.var("Threshold (in log 10 space)", threshold, 0.0f, 2.0f, 0.01f))
     {
-        widget.tooltip(mReferenceImagePath.string());
+        reset();
     }
 
-    // Display the filename of the measurement file.
-    const std::string outputText = "Output: " + getFilename(mMeasurementsFilePath);
-    widget.text(outputText);
-    if (!mMeasurementsFilePath.empty())
-    {
-        widget.tooltip(mMeasurementsFilePath.string());
-    }
+    const std::string text = std::string("Frames accumulated ") + std::to_string(mFrameCount);
+    widget.text(text);
 
-    // Print numerical error (scalar and RGB).
-    if (widget.checkbox("Report running error", mReportRunningError) && mReportRunningError)
+    if (widget.var("Max Frames", mMaxFrameCount, 0u))
     {
-        // The checkbox was enabled; mark the running error values invalid so that they start fresh.
-        mRunningAvgError = -1.f;
+        reset();
     }
-    widget.tooltip("Exponential moving average, sigma = " + std::to_string(mRunningErrorSigma));
-    if (mMeasurements.valid)
-    {
-        // Use stream so we can control formatting.
-        std::ostringstream oss;
-        oss << std::scientific;
-        oss << (mComputeSquaredDifference ? "MSE (avg): " : "L1 error (avg): ")
-            << (mReportRunningError ? mRunningAvgError : mMeasurements.avgError) << std::endl;
-        oss << (mComputeSquaredDifference ? "MSE (rgb): " : "L1 error (rgb): ")
-            << (mReportRunningError ? mRunningError.r : mMeasurements.error.r) << ", "
-            << (mReportRunningError ? mRunningError.g : mMeasurements.error.g) << ", "
-            << (mReportRunningError ? mRunningError.b : mMeasurements.error.b);
-        widget.text(oss.str());
-    }
-    else
-    {
-        widget.text("Error: N/A");
-    }
-    */
 }
 
 bool ErrorMeasurePass::onKeyEvent(const KeyboardEvent& keyEvent)
@@ -424,4 +420,43 @@ void ErrorMeasurePass::saveMeasurementsToFile()
     mMeasurementsFile << mMeasurements.avgError << ",";
     mMeasurementsFile << mMeasurements.error.r << ',' << mMeasurements.error.g << ',' << mMeasurements.error.b;
     mMeasurementsFile << std::endl;
+}
+
+void ErrorMeasurePass::reset()
+{
+    mFrameCount = 0;
+}
+
+void ErrorMeasurePass::prepareAccumulation(RenderContext* pRenderContext, uint32_t width, uint32_t height)
+{
+    // Allocate/resize/clear buffers for intermedate data. These are different depending on accumulation mode.
+    // Buffers that are not used in the current mode are released.
+    auto prepareBuffer = [&](ref<Texture>& pBuf, ResourceFormat format, bool bufUsed)
+    {
+        if (!bufUsed)
+        {
+            pBuf = nullptr;
+            return;
+        }
+        // (Re-)create buffer if needed.
+        if (!pBuf || pBuf->getWidth() != width || pBuf->getHeight() != height)
+        {
+            pBuf = mpDevice->createTexture2D(
+                width, height, format, 1, 1, nullptr, ResourceBindFlags::ShaderResource | ResourceBindFlags::UnorderedAccess
+            );
+            FALCOR_ASSERT(pBuf);
+            reset();
+        }
+        // Clear data if accumulation has been reset (either above or somewhere else).
+        if (mFrameCount == 0)
+        {
+            if (getFormatType(format) == FormatType::Float)
+                pRenderContext->clearUAV(pBuf->getUAV().get(), float4(0.f));
+            else
+                pRenderContext->clearUAV(pBuf->getUAV().get(), uint4(0));
+        }
+    };
+
+    prepareBuffer(mpLastFrameSourceSum, ResourceFormat::RGBA32Float, true);
+    prepareBuffer(mpLastFrameReferenceSum, ResourceFormat::RGBA32Float, true);
 }

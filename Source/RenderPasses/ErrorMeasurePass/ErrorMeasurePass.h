@@ -62,6 +62,7 @@ public:
     virtual Properties getProperties() const override;
     virtual RenderPassReflection reflect(const CompileData& compileData) override;
     virtual void execute(RenderContext* pRenderContext, const RenderData& renderData) override;
+    virtual void setScene(RenderContext* pRenderContext, const ref<Scene>& pScene) override;
     virtual void renderUI(Gui::Widgets& widget) override;
     virtual bool onKeyEvent(const KeyboardEvent& keyEvent) override;
 
@@ -70,6 +71,8 @@ private:
     ref<Texture> getReference(const RenderData& renderData) const;
     bool loadMeasurementsFile();
     void saveMeasurementsToFile();
+    void prepareAccumulation(RenderContext* pRenderContext, uint32_t width, uint32_t height);
+    void reset();
 
     void runDifferencePass(RenderContext* pRenderContext, const RenderData& renderData);
     void runReductionPasses(RenderContext* pRenderContext, const RenderData& renderData);
@@ -115,7 +118,18 @@ private:
     /// Coefficient used for the exponential moving average. Larger values mean slower response.
     float mRunningErrorSigma = 0.995f;
 
-    float multi = 10.0f;
+    /// The current scene (or nullptr if no scene).
+    ref<Scene> mpScene;
+
+    /// Current frame dimension in pixels.
+    uint2 mFrameDim = {0, 0};
+
+    bool mEnabled = true;
+    uint32_t mFrameCount = 0;
+    uint32_t mMaxFrameCount = 100;
+    ref<Texture> mpLastFrameSourceSum;
+    ref<Texture> mpLastFrameReferenceSum;
+    float threshold = 0.5f;
 
     OutputId mSelectedOutputId = OutputId::Difference;
 

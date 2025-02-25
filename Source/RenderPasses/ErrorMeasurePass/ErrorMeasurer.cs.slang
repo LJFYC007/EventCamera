@@ -28,16 +28,34 @@
 Texture2D<float4> gReference;
 Texture2D<float4> gSource;
 Texture2D<float4> gWorldPosition;
-RWTexture2D<float4> gResult;
 
 cbuffer PerFrameCB
 {
     uint2 gResolution;
-    uint gIgnoreBackground;
-    uint gComputeDiffSqr;
-    uint gComputeAverage;
-    float gMulti;
+    uint gAccumCount;
+    bool gAccumulate;
+    float gThreshold;
 };
+
+RWTexture2D<float4> gResult;
+RWTexture2D<float4> gLastFrameSourceSum;
+RWTexture2D<float4> gLastFrameReferenceSum;
+
+void accumulate(uint2 pixel, float4 sourceColor, float4 referenceColor, out float4 sourceOutput, out float4 referenceOutput)
+{
+    float curWeight = 1.0 / (gAccumCount + 1);
+    if (gAccumulate)
+    {
+        float4 sourceSum = gLastFrameSourceSum[pixel] + sourceColor;
+        gLastFrameSourceSum[pixel] = sourceSum;
+
+        float4 referenceSum = gLastFrameReferenceSum[pixel] + referenceColor;
+        referenceOutput = referenceSum * curWeight;
+        gLastFrameReferenceSum[pixel] = referenceSum;
+    }
+    sourceOutput = gLastFrameSourceSum[pixel] * curWeight;
+    referenceOutput = gLastFrameReferenceSum[pixel] * curWeight;
+}
 
 [numthreads(16, 16, 1)]
 void main(uint3 DTid: SV_DispatchThreadID)
@@ -46,31 +64,18 @@ void main(uint3 DTid: SV_DispatchThreadID)
     if (any(pixel >= gResolution))
         return;
 
-    /*
-    // Determine if we should include this pixel or not.
-    const float4 worldPos = gWorldPosition[pixel];
-    const bool isForeground = worldPos.w != 0.0f; // We're using the w-component to identify valid pixels.
+    float4 sourceOutput;
+    float4 referenceOutput;
+    accumulate(pixel, gSource[pixel], gReference[pixel], sourceOutput, referenceOutput);
 
-    const bool isPixelValid = !gIgnoreBackground || isForeground;
-
-    // Compute error based on the current options.
-    float3 diff = isPixelValid ? abs(gSource[pixel].rgb - gReference[pixel].rgb) : float3(0.0f);
-    if (gComputeDiffSqr)
-        diff *= diff;
-    if (gComputeAverage)
-        diff.rgb = (diff.r + diff.g + diff.b) / 3.f;
-
-    gResult[pixel] = float4(diff, 0.0f);
-    */
-
-    float sourceI = 0.299f * gSource[pixel].r + 0.587f * gSource[pixel].g + 0.114f * gSource[pixel].b;
-    float referenceI = 0.299f * gReference[pixel].r + 0.587f * gReference[pixel].g + 0.114f * gReference[pixel].b;
+    float sourceI = 0.299f * sourceOutput.r + 0.587f * sourceOutput.g + 0.114f * sourceOutput.b;
+    float referenceI = 0.299f * referenceOutput.r + 0.587f * referenceOutput.g + 0.114f * referenceOutput.b;
     float diff = log10(sourceI / referenceI);
-    if ( diff > 1.f )
-        gResult[pixel] = float4(1.0f, 0.0f, 0.0f, 0.0f);
-    else if (diff < -1.f)
-        gResult[pixel] = float4(0.0f, 1.0f, 0.0f, 0.0f);
-    else
-        gResult[pixel] = float4(0.0f);
-    // gResult[pixel] = float4(float3(sourceI / referenceI), 0.0f);
+    float4 output = float4(0.0f);
+    if (diff > gThreshold )
+        output = float4(1.0f, 0.0f, 0.0f, 0.0f);
+    else if (diff < -gThreshold )
+        output = float4(0.0f, 1.0f, 0.0f, 0.0f);
+
+    gResult[pixel] = output;
 }

@@ -13,9 +13,6 @@ def render_graph_PathTracer():
     g.addEdge("VBufferRT.vbuffer", "PathTracer.vbuffer")
     g.addEdge("VBufferRT.viewW", "PathTracer.viewW")
     g.addEdge("VBufferRT.mvec", "PathTracer.mvec")
-    g.addEdge("PathTracer.color", "AccumulatePass.input")
-    # g.addEdge("AccumulatePass.output", "ToneMapper.src")
-    # g.markOutput("ToneMapper.dst")
 
     PathTracer1 = createPass("PathTracer", {'samplesPerPixel': 1, 'useNRDDemodulation': False, 'fixedSeed': 1})
     g.addPass(PathTracer1, "PathTracer1")
@@ -26,26 +23,15 @@ def render_graph_PathTracer():
     g.addEdge("VBufferRT1.vbuffer", "PathTracer1.vbuffer")
     g.addEdge("VBufferRT1.viewW", "PathTracer1.viewW")
     g.addEdge("VBufferRT1.mvec", "PathTracer1.mvec")
-    g.addEdge("PathTracer1.color", "AccumulatePass1.input")
 
     ErrorMeasurePass= createPass("ErrorMeasurePass")
     g.addPass(ErrorMeasurePass, "ErrorMeasurePass")
-    g.addEdge("AccumulatePass.output", "ErrorMeasurePass.Reference")
-    g.addEdge("AccumulatePass1.output", "ErrorMeasurePass.Source")
-    # g.addEdge("PathTracer.color", "ErrorMeasurePass.Reference")
-    # g.addEdge("PathTracer1.color", "ErrorMeasurePass.Source")
+    g.addEdge("PathTracer.color", "ErrorMeasurePass.Reference")
+    g.addEdge("PathTracer1.color", "ErrorMeasurePass.Source")
     g.markOutput("ErrorMeasurePass.Output")
 
-    """
-    g.addEdge("ErrorMeasurePass.Output", "AccumulatePass.input")
-    g.markOutput("AccumulatePass.output")
-
-    g.addEdge("AccumulatePass.output", "ToneMapper.src")
-    g.markOutput("ToneMapper.dst")
-
-    g.markOutput("PathTracer.color")
-    g.markOutput("PathTracer1.color")
-    """
+    # g.addEdge("PathTracer1.color", "AccumulatePass.input")
+    # g.markOutput("AccumulatePass.output")
     return g
 
 PathTracer = render_graph_PathTracer()
