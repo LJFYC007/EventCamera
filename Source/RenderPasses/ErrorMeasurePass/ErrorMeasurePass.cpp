@@ -245,6 +245,8 @@ void ErrorMeasurePass::runDifferencePass(RenderContext* pRenderContext, const Re
     var[kConstantBufferName]["gThreshold"] = threshold;
     var[kConstantBufferName]["gAccumCount"] = mFrameCount;
     var[kConstantBufferName]["gAccumulate"] = mEnabled;
+    var[kConstantBufferName]["gMethod"] = (uint32_t)mMethod;
+    var["gLastFrameSum"] = mpLastFrameSum;
     var["gLastFrameSourceSum"] = mpLastFrameSourceSum;
     var["gLastFrameReferenceSum"] = mpLastFrameReferenceSum;
 
@@ -331,6 +333,11 @@ void ErrorMeasurePass::renderUI(Gui::Widgets& widget)
     }
 
     if (widget.var("Threshold (in log 10 space)", threshold, 0.0f, 2.0f, 0.01f))
+    {
+        reset();
+    }
+
+    if (widget.dropdown("Method", mMethod))
     {
         reset();
     }
@@ -457,6 +464,7 @@ void ErrorMeasurePass::prepareAccumulation(RenderContext* pRenderContext, uint32
         }
     };
 
-    prepareBuffer(mpLastFrameSourceSum, ResourceFormat::RGBA32Float, true);
-    prepareBuffer(mpLastFrameReferenceSum, ResourceFormat::RGBA32Float, true);
+    prepareBuffer(mpLastFrameSum, ResourceFormat::R32Float, true);
+    prepareBuffer(mpLastFrameSourceSum, ResourceFormat::R32Float, true);
+    prepareBuffer(mpLastFrameReferenceSum, ResourceFormat::R32Float, true);
 }

@@ -35,27 +35,13 @@ cbuffer PerFrameCB
     uint gAccumCount;
     bool gAccumulate;
     float gThreshold;
+    uint gMethod;
 };
 
 RWTexture2D<float4> gResult;
-RWTexture2D<float4> gLastFrameSourceSum;
-RWTexture2D<float4> gLastFrameReferenceSum;
-
-void accumulate(uint2 pixel, float4 sourceColor, float4 referenceColor, out float4 sourceOutput, out float4 referenceOutput)
-{
-    float curWeight = 1.0 / (gAccumCount + 1);
-    if (gAccumulate)
-    {
-        float4 sourceSum = gLastFrameSourceSum[pixel] + sourceColor;
-        gLastFrameSourceSum[pixel] = sourceSum;
-
-        float4 referenceSum = gLastFrameReferenceSum[pixel] + referenceColor;
-        referenceOutput = referenceSum * curWeight;
-        gLastFrameReferenceSum[pixel] = referenceSum;
-    }
-    sourceOutput = gLastFrameSourceSum[pixel] * curWeight;
-    referenceOutput = gLastFrameReferenceSum[pixel] * curWeight;
-}
+RWTexture2D<float> gLastFrameSum;
+RWTexture2D<float> gLastFrameSourceSum;
+RWTexture2D<float> gLastFrameReferenceSum;
 
 [numthreads(16, 16, 1)]
 void main(uint3 DTid: SV_DispatchThreadID)
@@ -64,18 +50,40 @@ void main(uint3 DTid: SV_DispatchThreadID)
     if (any(pixel >= gResolution))
         return;
 
-    float4 sourceOutput;
-    float4 referenceOutput;
-    accumulate(pixel, gSource[pixel], gReference[pixel], sourceOutput, referenceOutput);
-
-    float sourceI = 0.299f * sourceOutput.r + 0.587f * sourceOutput.g + 0.114f * sourceOutput.b;
-    float referenceI = 0.299f * referenceOutput.r + 0.587f * referenceOutput.g + 0.114f * referenceOutput.b;
-    float diff = log10(sourceI / referenceI);
     float4 output = float4(0.0f);
-    if (diff > gThreshold )
-        output = float4(1.0f, 0.0f, 0.0f, 0.0f);
-    else if (diff < -gThreshold )
-        output = float4(0.0f, 1.0f, 0.0f, 0.0f);
+    float sourceI = 0.299f * gSource[pixel].r + 0.587f * gSource[pixel].g + 0.114f * gSource[pixel].b;
+    float referenceI = 0.299f * gReference[pixel].r + 0.587f * gReference[pixel].g + 0.114f * gReference[pixel].b;
+
+    if (gMethod == 0)
+    {
+        float curWeight = 1.0 / (gAccumCount + 1);
+        if (gAccumulate)
+        {
+            gLastFrameSourceSum[pixel] += sourceI;
+            gLastFrameReferenceSum[pixel] += referenceI;
+        }
+        float sourceOutput = gLastFrameSourceSum[pixel] * curWeight;
+        float referenceOutput = gLastFrameReferenceSum[pixel] * curWeight;
+
+        float diff = log10(sourceOutput / referenceOutput);
+        if (diff > gThreshold)
+            output = float4(1.0f, 0.0f, 0.0f, 0.0f);
+        else if (diff < -gThreshold)
+            output = float4(0.0f, 1.0f, 0.0f, 0.0f);
+    }
+    else if (gMethod == 1)
+    {
+        float diff = sourceI / referenceI;
+        // float diff = referenceI / sourceI;
+        if (gAccumulate)
+            gLastFrameSum[pixel] += diff;
+        float avgDiff = log10(gLastFrameSum[pixel] / (gAccumCount + 1));
+
+        if (avgDiff > gThreshold)
+            output = float4(1.0f, 0.0f, 0.0f, 0.0f);
+        else if (avgDiff < -gThreshold)
+            output = float4(0.0f, 1.0f, 0.0f, 0.0f);
+    }
 
     gResult[pixel] = output;
 }

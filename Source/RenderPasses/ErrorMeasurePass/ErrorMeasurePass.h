@@ -55,6 +55,21 @@ public:
         }
     );
 
+    enum class Method : uint32_t
+    {
+        GroundTructh,
+        DivideFirst
+    };
+
+    FALCOR_ENUM_INFO(
+        Method,
+        {
+            {Method::GroundTructh, "GroundTructh"},
+            {Method::DivideFirst, "DivideFirst"},
+        }
+    );
+
+
     static ref<ErrorMeasurePass> create(ref<Device> pDevice, const Properties& props) { return make_ref<ErrorMeasurePass>(pDevice, props); }
 
     ErrorMeasurePass(ref<Device> pDevice, const Properties& props);
@@ -127,9 +142,12 @@ private:
     bool mEnabled = true;
     uint32_t mFrameCount = 0;
     uint32_t mMaxFrameCount = 100;
+    ref<Texture> mpLastFrameSum;
     ref<Texture> mpLastFrameSourceSum;
     ref<Texture> mpLastFrameReferenceSum;
     float threshold = 0.5f;
+
+    Method mMethod = Method::GroundTructh;
 
     OutputId mSelectedOutputId = OutputId::Difference;
 
@@ -138,3 +156,4 @@ private:
 };
 
 FALCOR_ENUM_REGISTER(ErrorMeasurePass::OutputId);
+FALCOR_ENUM_REGISTER(ErrorMeasurePass::Method);
