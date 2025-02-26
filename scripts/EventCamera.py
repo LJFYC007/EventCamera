@@ -10,14 +10,22 @@ def render_graph_PathTracer():
     g.addEdge("VBufferRT.viewW", "PathTracer.viewW")
     g.addEdge("VBufferRT.mvec", "PathTracer.mvec")
 
-    ErrorMeasurePass= createPass("ErrorMeasurePass", {'Threshold': 0.5})
+    ErrorMeasurePass= createPass("ErrorMeasurePass", {'Threshold': 1.5})
     g.addPass(ErrorMeasurePass, "ErrorMeasurePass")
     g.addEdge("PathTracer.color", "ErrorMeasurePass.Reference")
     g.addEdge("PathTracer.color", "ErrorMeasurePass.Source")
-    g.markOutput("ErrorMeasurePass.Output")
 
+    g.markOutput("ErrorMeasurePass.Output")
+    # g.markOutput("PathTracer.color")
     return g
 
 PathTracer = render_graph_PathTracer()
 try: m.addGraph(PathTracer)
 except NameError: None
+
+"""
+m.clock.exitFrame = 5001
+m.frameCapture.outputDir = "C:\\Users\\-LJF007-\\Documents\\output\\BistroInterior_Wine"
+m.frameCapture.baseFilename = ""
+m.frameCapture.addFrames(m.activeGraph, range(1, 5000))
+"""
