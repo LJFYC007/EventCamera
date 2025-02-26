@@ -53,6 +53,7 @@ const std::string kUseLoadedReference = "UseLoadedReference";
 const std::string kReportRunningError = "ReportRunningError";
 const std::string kRunningErrorSigma = "RunningErrorSigma";
 const std::string kSelectedOutputId = "SelectedOutputId";
+const std::string kThreshold = "Threshold";
 } // namespace
 
 extern "C" FALCOR_API_EXPORT void registerPlugin(Falcor::PluginRegistry& registry)
@@ -89,6 +90,8 @@ ErrorMeasurePass::ErrorMeasurePass(ref<Device> pDevice, const Properties& props)
             mRunningErrorSigma = value;
         else if (key == kSelectedOutputId)
             mSelectedOutputId = value;
+        else if (key == kThreshold)
+            threshold = value;
         else
         {
             logWarning("Unknown property '{}' in ErrorMeasurePass properties.", key);
