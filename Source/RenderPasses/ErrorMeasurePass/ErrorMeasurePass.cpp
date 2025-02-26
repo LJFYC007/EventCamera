@@ -139,31 +139,6 @@ void ErrorMeasurePass::setScene(RenderContext* pRenderContext, const ref<Scene>&
 
 void ErrorMeasurePass::execute(RenderContext* pRenderContext, const RenderData& renderData)
 {
-    // Query refresh flags passed down from the application and other passes.
-    auto& dict = renderData.getDictionary();
-    auto refreshFlags = dict.getValue(kRenderPassRefreshFlags, RenderPassRefreshFlags::None);
-
-    // If any refresh flag is set, we reset frame accumulation.
-    if (refreshFlags != RenderPassRefreshFlags::None)
-        reset();
-
-    // Reset accumulation upon all scene changes, except camera jitter and history changes.
-    if (mpScene)
-    {
-        auto sceneUpdates = mpScene->getUpdates();
-        if ((sceneUpdates & ~IScene::UpdateFlags::CameraPropertiesChanged) != IScene::UpdateFlags::None)
-        {
-            reset();
-        }
-        if (is_set(sceneUpdates, IScene::UpdateFlags::CameraPropertiesChanged))
-        {
-            auto excluded = Camera::Changes::Jitter | Camera::Changes::History;
-            auto cameraChanges = mpScene->getCamera()->getChanges();
-            if ((cameraChanges & ~excluded) != Camera::Changes::None)
-                reset();
-        }
-    }
-
     ref<Texture> pSourceImageTexture = renderData.getTexture(kInputChannelSourceImage);
     ref<Texture> pOutputImageTexture = renderData.getTexture(kOutputChannelImage);
 
@@ -243,17 +218,8 @@ void ErrorMeasurePass::runDifferencePass(RenderContext* pRenderContext, const Re
     const uint2 resolution = uint2(pSourceTexture->getWidth(), pSourceTexture->getHeight());
     var[kConstantBufferName]["gResolution"] = resolution;
     var[kConstantBufferName]["gThreshold"] = threshold;
-    var[kConstantBufferName]["gAccumCount"] = mFrameCount;
-    var[kConstantBufferName]["gAccumulate"] = mEnabled;
     var[kConstantBufferName]["gMethod"] = (uint32_t)mMethod;
-    var["gLastFrameSum"] = mpLastFrameSum;
-    var["gLastFrameSourceSum"] = mpLastFrameSourceSum;
-    var["gLastFrameReferenceSum"] = mpLastFrameReferenceSum;
-
-    if ( mFrameCount >= mMaxFrameCount )
-        mEnabled = false;
-    else
-        mEnabled = true, mFrameCount ++;
+    var["gLastEvent"] = mpLastEvent;
 
     // Run the compute shader.
     mpErrorMeasurerPass->execute(pRenderContext, resolution.x, resolution.y);
@@ -341,14 +307,6 @@ void ErrorMeasurePass::renderUI(Gui::Widgets& widget)
     {
         reset();
     }
-
-    const std::string text = std::string("Frames accumulated ") + std::to_string(mFrameCount);
-    widget.text(text);
-
-    if (widget.var("Max Frames", mMaxFrameCount, 0u))
-    {
-        reset();
-    }
 }
 
 bool ErrorMeasurePass::onKeyEvent(const KeyboardEvent& keyEvent)
@@ -431,7 +389,7 @@ void ErrorMeasurePass::saveMeasurementsToFile()
 
 void ErrorMeasurePass::reset()
 {
-    mFrameCount = 0;
+    mReset = true;
 }
 
 void ErrorMeasurePass::prepareAccumulation(RenderContext* pRenderContext, uint32_t width, uint32_t height)
@@ -455,16 +413,15 @@ void ErrorMeasurePass::prepareAccumulation(RenderContext* pRenderContext, uint32
             reset();
         }
         // Clear data if accumulation has been reset (either above or somewhere else).
-        if (mFrameCount == 0)
+        if (mReset == true)
         {
             if (getFormatType(format) == FormatType::Float)
                 pRenderContext->clearUAV(pBuf->getUAV().get(), float4(0.f));
             else
                 pRenderContext->clearUAV(pBuf->getUAV().get(), uint4(0));
+            mReset = false;
         }
     };
 
-    prepareBuffer(mpLastFrameSum, ResourceFormat::R32Float, true);
-    prepareBuffer(mpLastFrameSourceSum, ResourceFormat::R32Float, true);
-    prepareBuffer(mpLastFrameReferenceSum, ResourceFormat::R32Float, true);
+    prepareBuffer(mpLastEvent, ResourceFormat::R32Float, true);
 }

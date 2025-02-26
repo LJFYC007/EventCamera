@@ -452,11 +452,6 @@ void PathTracer::execute(RenderContext* pRenderContext, const RenderData& render
     // Update shader program specialization.
     updatePrograms();
 
-    float3 movement = renderData.getDictionary()[kMovement];
-    float3 cameraPos = mpScene->getCamera()->getPosition();
-    mpScene->getCamera()->setPosition(cameraPos + movement);
-    mpScene->getCamera()->getData();
-
     // Prepare resources.
     prepareResources(pRenderContext, renderData);
 
@@ -490,9 +485,6 @@ void PathTracer::execute(RenderContext* pRenderContext, const RenderData& render
     resolvePass(pRenderContext, renderData);
 
     endFrame(pRenderContext, renderData);
-
-    mpScene->getCamera()->setPosition(cameraPos);
-    mpScene->getCamera()->getData();
 }
 
 void PathTracer::renderUI(Gui::Widgets& widget)

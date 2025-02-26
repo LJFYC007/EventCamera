@@ -32,16 +32,12 @@ Texture2D<float4> gWorldPosition;
 cbuffer PerFrameCB
 {
     uint2 gResolution;
-    uint gAccumCount;
-    bool gAccumulate;
     float gThreshold;
     uint gMethod;
 };
 
 RWTexture2D<float4> gResult;
-RWTexture2D<float> gLastFrameSum;
-RWTexture2D<float> gLastFrameSourceSum;
-RWTexture2D<float> gLastFrameReferenceSum;
+RWTexture2D<float> gLastEvent;
 
 [numthreads(16, 16, 1)]
 void main(uint3 DTid: SV_DispatchThreadID)
@@ -51,38 +47,19 @@ void main(uint3 DTid: SV_DispatchThreadID)
         return;
 
     float4 output = float4(0.0f);
-    float sourceI = 0.299f * gSource[pixel].r + 0.587f * gSource[pixel].g + 0.114f * gSource[pixel].b;
-    float referenceI = 0.299f * gReference[pixel].r + 0.587f * gReference[pixel].g + 0.114f * gReference[pixel].b;
+    float nowI = 0.299f * gSource[pixel].r + 0.587f * gSource[pixel].g + 0.114f * gSource[pixel].b;
+    float preI = gLastEvent[pixel];
 
-    if (gMethod == 0)
+    float diff = log10(nowI / preI);
+    if (diff > gThreshold)
     {
-        float curWeight = 1.0 / (gAccumCount + 1);
-        if (gAccumulate)
-        {
-            gLastFrameSourceSum[pixel] += sourceI;
-            gLastFrameReferenceSum[pixel] += referenceI;
-        }
-        float sourceOutput = gLastFrameSourceSum[pixel] * curWeight;
-        float referenceOutput = gLastFrameReferenceSum[pixel] * curWeight;
-
-        float diff = log10(sourceOutput / referenceOutput);
-        if (diff > gThreshold)
-            output = float4(1.0f, 0.0f, 0.0f, 0.0f);
-        else if (diff < -gThreshold)
-            output = float4(0.0f, 1.0f, 0.0f, 0.0f);
+        output = float4(1.0f, 0.0f, 0.0f, 0.0f);
+        gLastEvent[pixel] = nowI;
     }
-    else if (gMethod == 1)
+    else if (diff < -gThreshold)
     {
-        float diff = sourceI / referenceI;
-        // float diff = referenceI / sourceI;
-        if (gAccumulate)
-            gLastFrameSum[pixel] += diff;
-        float avgDiff = log10(gLastFrameSum[pixel] / (gAccumCount + 1));
-
-        if (avgDiff > gThreshold)
-            output = float4(1.0f, 0.0f, 0.0f, 0.0f);
-        else if (avgDiff < -gThreshold)
-            output = float4(0.0f, 1.0f, 0.0f, 0.0f);
+        output = float4(0.0f, 1.0f, 0.0f, 0.0f);
+        gLastEvent[pixel] = nowI;
     }
 
     gResult[pixel] = output;

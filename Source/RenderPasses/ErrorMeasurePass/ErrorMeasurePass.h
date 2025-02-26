@@ -139,12 +139,8 @@ private:
     /// Current frame dimension in pixels.
     uint2 mFrameDim = {0, 0};
 
-    bool mEnabled = true;
-    uint32_t mFrameCount = 0;
-    uint32_t mMaxFrameCount = 100;
-    ref<Texture> mpLastFrameSum;
-    ref<Texture> mpLastFrameSourceSum;
-    ref<Texture> mpLastFrameReferenceSum;
+    bool mReset = false;
+    ref<Texture> mpLastEvent;
     float threshold = 0.5f;
 
     Method mMethod = Method::GroundTructh;

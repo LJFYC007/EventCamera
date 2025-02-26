@@ -112,9 +112,6 @@ void VBufferRT::execute(RenderContext* pRenderContext, const RenderData& renderD
         // Configure depth-of-field.
         // When DOF is enabled, two PRNG dimensions are used. Pass this info to subsequent passes via the dictionary.
         mComputeDOF = mUseDOF && mpScene->getCamera()->getApertureRadius() > 0.f;
-        float3 cameraPos = mpScene->getCamera()->getPosition();
-        mpScene->getCamera()->setPosition(cameraPos + movement);
-        mpScene->getCamera()->getData();
         if (mUseDOF)
         {
             renderData.getDictionary()[Falcor::kRenderPassPRNGDimension] = mComputeDOF ? 2u : 0u;
@@ -123,8 +120,6 @@ void VBufferRT::execute(RenderContext* pRenderContext, const RenderData& renderD
         mUseTraceRayInline ? executeCompute(pRenderContext, renderData) : executeRaytrace(pRenderContext, renderData);
         mUpdateFlags = IScene::UpdateFlags::None;
         mFrameCount++;
-        mpScene->getCamera()->setPosition(cameraPos);
-        mpScene->getCamera()->getData();
     }
     else // If there is no scene, clear the output and return.
     {
