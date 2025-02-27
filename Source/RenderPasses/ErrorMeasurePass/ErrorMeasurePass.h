@@ -140,8 +140,12 @@ private:
     uint2 mFrameDim = {0, 0};
 
     bool mReset = false;
-    ref<Texture> mpLastEvent;
+    uint mAccumulatedMax = 1;
     float threshold = 0.5f;
+
+    ref<Texture> mpLastEvent;
+    ref<Texture> mpRecentSum;
+    ref<Texture> mpRecentCount;
 
     Method mMethod = Method::GroundTructh;
 

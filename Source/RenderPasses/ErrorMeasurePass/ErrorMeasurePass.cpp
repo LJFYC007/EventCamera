@@ -54,6 +54,7 @@ const std::string kReportRunningError = "ReportRunningError";
 const std::string kRunningErrorSigma = "RunningErrorSigma";
 const std::string kSelectedOutputId = "SelectedOutputId";
 const std::string kThreshold = "Threshold";
+const std::string kAccumulateMax = "AccumulateMax";
 } // namespace
 
 extern "C" FALCOR_API_EXPORT void registerPlugin(Falcor::PluginRegistry& registry)
@@ -92,6 +93,8 @@ ErrorMeasurePass::ErrorMeasurePass(ref<Device> pDevice, const Properties& props)
             mSelectedOutputId = value;
         else if (key == kThreshold)
             threshold = value;
+        else if (key == kAccumulateMax)
+            mAccumulatedMax = value;
         else
         {
             logWarning("Unknown property '{}' in ErrorMeasurePass properties.", key);
@@ -118,6 +121,8 @@ Properties ErrorMeasurePass::getProperties() const
     props[kReportRunningError] = mReportRunningError;
     props[kRunningErrorSigma] = mRunningErrorSigma;
     props[kSelectedOutputId] = mSelectedOutputId;
+    props[kThreshold] = threshold;
+    props[kAccumulateMax] = mAccumulatedMax;
     return props;
 }
 
@@ -220,9 +225,12 @@ void ErrorMeasurePass::runDifferencePass(RenderContext* pRenderContext, const Re
     // Set constant buffer parameters.
     const uint2 resolution = uint2(pSourceTexture->getWidth(), pSourceTexture->getHeight());
     var[kConstantBufferName]["gResolution"] = resolution;
+    var[kConstantBufferName]["gAccumulatedMax"] = mAccumulatedMax;
     var[kConstantBufferName]["gThreshold"] = threshold;
     var[kConstantBufferName]["gMethod"] = (uint32_t)mMethod;
     var["gLastEvent"] = mpLastEvent;
+    var["gRecentSum"] = mpRecentSum;
+    var["gRecentCount"] = mpRecentCount;
 
     // Run the compute shader.
     mpErrorMeasurerPass->execute(pRenderContext, resolution.x, resolution.y);
@@ -307,6 +315,11 @@ void ErrorMeasurePass::renderUI(Gui::Widgets& widget)
     }
 
     if (widget.dropdown("Method", mMethod))
+    {
+        reset();
+    }
+
+    if (widget.var("Max accumulated threshold", mAccumulatedMax, 1u, 10u))
     {
         reset();
     }
@@ -427,4 +440,6 @@ void ErrorMeasurePass::prepareAccumulation(RenderContext* pRenderContext, uint32
     };
 
     prepareBuffer(mpLastEvent, ResourceFormat::R32Float, true);
+    prepareBuffer(mpRecentCount, ResourceFormat::R32Float, true);
+    prepareBuffer(mpRecentSum, ResourceFormat::R32Uint, true);
 }

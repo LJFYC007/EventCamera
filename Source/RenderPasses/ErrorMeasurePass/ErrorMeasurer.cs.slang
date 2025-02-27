@@ -34,10 +34,25 @@ cbuffer PerFrameCB
     uint2 gResolution;
     float gThreshold;
     uint gMethod;
+    uint gAccumulatedMax;
 };
 
 RWTexture2D<float4> gResult;
 RWTexture2D<float> gLastEvent;
+RWTexture2D<float> gRecentSum;
+RWTexture2D<uint> gRecentCount;
+
+void clearRecentStatus(uint2 pixel)
+{
+    gRecentSum[pixel] = 0.f;
+    gRecentCount[pixel] = 0;
+}
+
+void updateRecentStatus(uint2 pixel, float illuminance)
+{
+    gRecentSum[pixel] += illuminance;
+    gRecentCount[pixel] ++;
+}
 
 [numthreads(16, 16, 1)]
 void main(uint3 DTid: SV_DispatchThreadID)
@@ -46,21 +61,25 @@ void main(uint3 DTid: SV_DispatchThreadID)
     if (any(pixel >= gResolution))
         return;
 
-    float4 output = float4(0.0f);
+    gResult[pixel] = float4(0.f);
     float nowI = 0.299f * gSource[pixel].r + 0.587f * gSource[pixel].g + 0.114f * gSource[pixel].b;
     float preI = gLastEvent[pixel];
 
     float diff = log10(nowI / preI);
-    if (diff > gThreshold)
-    {
-        output = float4(1.0f, 0.0f, 0.0f, 0.0f);
-        gLastEvent[pixel] = nowI;
-    }
-    else if (diff < -gThreshold)
-    {
-        output = float4(0.0f, 1.0f, 0.0f, 0.0f);
-        gLastEvent[pixel] = nowI;
-    }
+    bool type;
+    if (diff > gThreshold) type = false;
+    else if (diff < -gThreshold) type = true;
+    else return ;
 
-    gResult[pixel] = output;
+    bool lastType = gRecentSum[pixel] > preI * gRecentCount[pixel] ? false : true;
+    if (lastType != type || gRecentCount[pixel] == 0)
+        clearRecentStatus(pixel);
+
+    updateRecentStatus(pixel, nowI);
+    if (gRecentCount[pixel] == gAccumulatedMax)
+    {
+        gLastEvent[pixel] = gRecentSum[pixel] / gAccumulatedMax;
+        clearRecentStatus(pixel);
+        gResult[pixel] = type ? float4(0.f, 1.f, 0.f, 0.f) : float4(1.f, 0.f, 0.f, 0.f);
+    }
 }

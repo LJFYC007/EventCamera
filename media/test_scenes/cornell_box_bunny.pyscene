@@ -110,8 +110,8 @@ camera.focalLength = 35.0
 sceneBuilder.addCamera(camera)
 sceneBuilder.cameraSpeed = 0.1
 
-animation = Animation(name='Bunny Animation', nodeID = bunnyID, duration=2.0)
+animation = Animation(name='Bunny Animation', nodeID = bunnyID, duration=10.0)
 animation.addKeyframe(0.0, Transform(translation=float3(0.01, 0.1, 0), rotationEuler=float3(0, 0, 0), scaling=1))
-animation.addKeyframe(1.0, Transform(translation=float3(0.06, 0.1, 0), rotationEuler=float3(0, 0, 0), scaling=1))
-animation.addKeyframe(2.0, Transform(translation=float3(0.06, 0.2, 0), rotationEuler=float3(0, 0, 0), scaling=1))
+animation.addKeyframe(5.0, Transform(translation=float3(0.06, 0.1, 0), rotationEuler=float3(0, 0, 0), scaling=1))
+animation.addKeyframe(10.0, Transform(translation=float3(0.06, 0.2, 0), rotationEuler=float3(0, 0, 0), scaling=1))
 sceneBuilder.addAnimation(animation)

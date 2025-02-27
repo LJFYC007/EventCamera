@@ -10,7 +10,7 @@ def render_graph_PathTracer():
     g.addEdge("VBufferRT.viewW", "PathTracer.viewW")
     g.addEdge("VBufferRT.mvec", "PathTracer.mvec")
 
-    ErrorMeasurePass= createPass("ErrorMeasurePass", {'Threshold': 1.5})
+    ErrorMeasurePass= createPass("ErrorMeasurePass", {'Threshold': 1.5, 'accumulateMax': 1})
     g.addPass(ErrorMeasurePass, "ErrorMeasurePass")
     g.addEdge("PathTracer.color", "ErrorMeasurePass.Reference")
     g.addEdge("PathTracer.color", "ErrorMeasurePass.Source")
