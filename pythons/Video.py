@@ -27,7 +27,7 @@ def create_video_from_exr():
 
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     video_output = os.path.join(work_dir, "output", "BistroInterior_Wine.mp4")
-    video_writer = cv2.VideoWriter(video_output, fourcc, fps, (video_width, video_height))
+    video_writer = cv2.VideoWriter(video_output, fourcc, 5, (video_width, video_height))
 
     events = []
     for exr_file in tqdm(exr_files, desc="Processing EXR files"):
@@ -40,7 +40,7 @@ def create_video_from_exr():
             frame = np.uint8(frame)
         events.append(frame)
 
-        if len(events) * 1 >= time_window_ms:
+        if len(events) >= time_window_ms * 10:
             latest_event = np.zeros((frame.shape[0], frame.shape[1]), dtype=np.uint8)
 
             for e in events:
@@ -51,7 +51,8 @@ def create_video_from_exr():
 
             visualization_frame = np.ones((frame.shape[0], frame.shape[1], 3), dtype=np.uint8) * 255 # White
             visualization_frame[latest_event == 1] = [0.78 * 255, 0.49 * 255, 0.25 * 255] # Blue
-            visualization_frame[latest_event == 2] = [0.20 * 255, 0.14 * 255, 0.11 * 255] # Black
+            # visualization_frame[latest_event == 2] = [0.20 * 255, 0.14 * 255, 0.11 * 255] # Black
+            visualization_frame[latest_event == 2] = [0.25 * 255, 0.14 * 255, 0.78 * 255] # Red
 
             video_writer.write(visualization_frame)
             events.clear()
@@ -59,5 +60,5 @@ def create_video_from_exr():
     video_writer.release()
     print(f"Video saved at: {video_output}")
 
-run_mogwai()
+# run_mogwai()
 create_video_from_exr()

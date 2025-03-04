@@ -2,7 +2,7 @@ from falcor import *
 
 def render_graph_PathTracer():
     g = RenderGraph("PathTracer")
-    PathTracer = createPass("PathTracer", {'samplesPerPixel': 16, 'useNRDDemodulation': False, 'fixedSeed': 0})
+    PathTracer = createPass("PathTracer", {'samplesPerPixel': 16, 'useNRDDemodulation': False, 'fixedSeed': 0, 'maxTransmissionBounces': 0, 'maxSpecularBounces': 3})
     g.addPass(PathTracer, "PathTracer")
     VBufferRT = createPass("VBufferRT", {'samplePattern': 'Center', 'useAlphaTest': True})
     g.addPass(VBufferRT, "VBufferRT")
@@ -10,7 +10,7 @@ def render_graph_PathTracer():
     g.addEdge("VBufferRT.viewW", "PathTracer.viewW")
     g.addEdge("VBufferRT.mvec", "PathTracer.mvec")
 
-    ErrorMeasurePass= createPass("ErrorMeasurePass", {'Threshold': 1.5, 'accumulateMax': 1})
+    ErrorMeasurePass= createPass("ErrorMeasurePass", {'Threshold': 1.5, 'AccumulateMax': 100})
     g.addPass(ErrorMeasurePass, "ErrorMeasurePass")
     g.addEdge("PathTracer.color", "ErrorMeasurePass.Reference")
     g.addEdge("PathTracer.color", "ErrorMeasurePass.Source")
@@ -27,5 +27,5 @@ except NameError: None
 m.clock.exitFrame = 5001
 m.frameCapture.outputDir = "C:\\Users\\-LJF007-\\Documents\\output\\BistroInterior_Wine"
 m.frameCapture.baseFilename = ""
-m.frameCapture.addFrames(m.activeGraph, range(1, 5000))
+m.frameCapture.addFrames(m.activeGraph, range(200, 4999))
 """

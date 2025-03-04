@@ -108,7 +108,7 @@ namespace Falcor
     Animation::Animation(std::string_view name, NodeID nodeID, double duration)
         : mName(name)
         , mNodeID(nodeID)
-        , mDuration(duration * 10.f)
+        , mDuration(duration * 500.f)
     {}
 
     float4x4 Animation::animate(double currentTime)
@@ -256,7 +256,7 @@ namespace Falcor
     void Animation::addKeyframe(const Keyframe& oldkeyframe)
     {
         Keyframe keyframe = oldkeyframe;
-        keyframe.time *= 10.f;
+        keyframe.time *= 500.f;
         FALCOR_ASSERT(keyframe.time <= mDuration);
 
         if (mKeyframes.size() == 0 || mKeyframes[0].time > keyframe.time)
