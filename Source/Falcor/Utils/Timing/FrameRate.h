@@ -54,7 +54,7 @@ public:
     void reset()
     {
         mFrameCount = 0;
-        mClock.setTime(0).tick();
+        mTimer.update(); // Initialize the timer
     }
 
     /**
@@ -64,8 +64,8 @@ public:
     void newFrame()
     {
         mFrameCount++;
-        mFrameTimes[mFrameCount % kFrameWindow] = mClock.tick().getRealTimeDelta();
-        mClock.setTime(0).tick();
+        auto timePoint = mTimer.update();
+        mFrameTimes[mFrameCount % kFrameWindow] = mTimer.delta();
     }
 
     /**
@@ -96,7 +96,7 @@ public:
     std::string getMsg(bool vsyncOn = false) const;
 
 private:
-    Clock mClock;
+    CpuTimer mTimer;
     std::vector<double> mFrameTimes;
     uint64_t mFrameCount = 0;
     static constexpr uint64_t kFrameWindow = 60;

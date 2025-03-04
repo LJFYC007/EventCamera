@@ -21,3 +21,10 @@ def render_graph_PathTracer():
 PathTracer = render_graph_PathTracer()
 try: m.addGraph(PathTracer)
 except NameError: None
+
+"""
+m.clock.exitFrame = 401
+m.frameCapture.outputDir = "C:\\Users\\-LJF007-\\Documents\\output\\BistroInterior_Wine"
+m.frameCapture.baseFilename = ""
+m.frameCapture.addFrames(m.activeGraph, range(1, 400))
+"""

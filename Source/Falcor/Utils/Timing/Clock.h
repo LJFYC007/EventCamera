@@ -35,7 +35,51 @@
 
 namespace Falcor
 {
-/**
+
+class FALCOR_API StableTimer
+{
+public:
+    using TimePoint = CpuTimer::TimePoint;
+
+    /**
+     * Returns the current time.
+     */
+    static TimePoint getCurrentTimePoint() { return CpuTimer::getCurrentTimePoint(); }
+
+    /**
+     * Update the timer.
+     * @return The TimePoint of the last update() call. This value is meaningless on its own. Call calcDuration() to get the duration that
+     * passed between two TimePoints.
+     */
+    TimePoint update()
+    {
+        auto now = mCurrentTime;
+        mElapsedTime = std::chrono::duration<double>(mTimePeriod);
+        mCurrentTime = TimePoint(mCurrentTime.time_since_epoch() + std::chrono::duration_cast<std::chrono::system_clock::duration>(std::chrono::duration<double>(mTimePeriod)));
+        return mCurrentTime;
+    }
+
+    /**
+     * Get the time that passed from the last update() call to the one before that.
+     * @return Elapsed time in seconds.
+     */
+    double delta() const { return mElapsedTime.count(); }
+
+    /**
+     * Calculate the duration in milliseconds between 2 time points.
+     */
+    static double calcDuration(TimePoint start, TimePoint end)
+    {
+        return CpuTimer::calcDuration(start, end);
+    }
+
+private:
+    TimePoint mCurrentTime;
+    std::chrono::duration<double> mElapsedTime{0.0};
+    double mTimePeriod = 1.0 / 60.0; // Fixed time period in seconds
+};
+
+/*
  * A clock. This class supports both real-time clock (based on the system's clock) and a fixed time-step clock (based on tick count)
  */
 class FALCOR_API Clock
@@ -222,7 +266,7 @@ private:
     uint32_t mFramerate = 0;
     uint64_t mFrames = 0;
     uint64_t mTicksPerFrame = 0;
-    CpuTimer mTimer;
+    StableTimer mTimer;
 
     bool mPaused = false;
     double mScale = 1;
