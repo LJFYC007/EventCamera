@@ -76,7 +76,7 @@ public:
 private:
     TimePoint mCurrentTime;
     std::chrono::duration<double> mElapsedTime{0.0};
-    double mTimePeriod = 1.0 / 60.0; // Fixed time period in seconds
+    double mTimePeriod = 1.0 / 10000.0; // Fixed time period in seconds
 };
 
 /*
