@@ -69,7 +69,11 @@ void main(uint3 DTid: SV_DispatchThreadID)
     bool type;
     if (diff > gThreshold) type = false;
     else if (diff < -gThreshold) type = true;
-    else return ;
+    else
+    {
+        clearRecentStatus(pixel);
+        return;
+    }
 
     bool lastType = gRecentSum[pixel] > preI * gRecentCount[pixel] ? false : true;
     if (lastType != type || gRecentCount[pixel] == 0)

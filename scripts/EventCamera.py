@@ -2,9 +2,9 @@ from falcor import *
 
 def render_graph_PathTracer():
     g = RenderGraph("PathTracer")
-    PathTracer = createPass("PathTracer", {'samplesPerPixel': 16, 'useNRDDemodulation': False, 'fixedSeed': 0, 'maxTransmissionBounces': 0, 'maxSpecularBounces': 3})
+    PathTracer = createPass("PathTracer", {'samplesPerPixel': 16, 'useNRDDemodulation': False, 'fixedSeed': 0})
     g.addPass(PathTracer, "PathTracer")
-    VBufferRT = createPass("VBufferRT", {'samplePattern': 'Center', 'useAlphaTest': True})
+    VBufferRT = createPass("VBufferRT", {'samplePattern': 'Stratified', 'useAlphaTest': True})
     g.addPass(VBufferRT, "VBufferRT")
     g.addEdge("VBufferRT.vbuffer", "PathTracer.vbuffer")
     g.addEdge("VBufferRT.viewW", "PathTracer.viewW")
@@ -23,9 +23,7 @@ PathTracer = render_graph_PathTracer()
 try: m.addGraph(PathTracer)
 except NameError: None
 
-"""
 m.clock.exitFrame = 5001
 m.frameCapture.outputDir = "C:\\Users\\-LJF007-\\Documents\\output\\BistroInterior_Wine"
 m.frameCapture.baseFilename = ""
 m.frameCapture.addFrames(m.activeGraph, range(200, 4999))
-"""

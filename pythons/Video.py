@@ -60,5 +60,5 @@ def create_video_from_exr():
     video_writer.release()
     print(f"Video saved at: {video_output}")
 
-# run_mogwai()
+run_mogwai()
 create_video_from_exr()
