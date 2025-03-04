@@ -150,18 +150,7 @@ void ErrorMeasurePass::execute(RenderContext* pRenderContext, const RenderData& 
     // Reset accumulation upon all scene changes, except camera jitter and history changes.
     if (mpScene)
     {
-        auto sceneUpdates = mpScene->getUpdates();
-        if ((sceneUpdates & ~IScene::UpdateFlags::CameraPropertiesChanged) != IScene::UpdateFlags::None)
-        {
-            reset();
-        }
-        if (is_set(sceneUpdates, IScene::UpdateFlags::CameraPropertiesChanged))
-        {
-            auto excluded = Camera::Changes::Jitter | Camera::Changes::History;
-            auto cameraChanges = mpScene->getCamera()->getChanges();
-            if ((cameraChanges & ~excluded) != Camera::Changes::None)
-                reset();
-        }
+
     }
 
     ref<Texture> pSourceImageTexture = renderData.getTexture(kInputChannelSourceImage);

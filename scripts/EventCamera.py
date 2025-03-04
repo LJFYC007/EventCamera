@@ -2,7 +2,7 @@ from falcor import *
 
 def render_graph_PathTracer():
     g = RenderGraph("PathTracer")
-    PathTracer = createPass("PathTracer", {'samplesPerPixel': 1, 'useNRDDemodulation': False, 'fixedSeed': 1})
+    PathTracer = createPass("PathTracer", {'samplesPerPixel': 1, 'useNRDDemodulation': False, 'fixedSeed': 1, 'maxTransmissionBounces': 0})
     g.addPass(PathTracer, "PathTracer")
     VBufferRT = createPass("VBufferRT", {'samplePattern': 'Center', 'useAlphaTest': True})
     g.addPass(VBufferRT, "VBufferRT")
@@ -14,9 +14,9 @@ def render_graph_PathTracer():
     g.addEdge("VBufferRT.viewW", "PathTracer.viewW")
     g.addEdge("VBufferRT.mvec", "PathTracer.mvec")
 
-    PathTracer1 = createPass("PathTracer", {'samplesPerPixel': 1, 'useNRDDemodulation': False, 'fixedSeed': 1})
+    PathTracer1 = createPass("PathTracer", {'samplesPerPixel': 1, 'useNRDDemodulation': False, 'fixedSeed': 1, 'maxTransmissionBounces': 0})
     g.addPass(PathTracer1, "PathTracer1")
-    VBufferRT1 = createPass("VBufferRT", {'samplePattern': 'Center', 'useAlphaTest': True, 'movement': float3(0.0, 0.01, 0.01)})
+    VBufferRT1 = createPass("VBufferRT", {'samplePattern': 'Center', 'useAlphaTest': True, 'movement': float3(0.001, 0.00, 0.0)})
     g.addPass(VBufferRT1, "VBufferRT1")
     AccumulatePass1 = createPass("AccumulatePass", {'enabled': True, 'precisionMode': 'Single'})
     g.addPass(AccumulatePass1, "AccumulatePass1")
@@ -30,8 +30,8 @@ def render_graph_PathTracer():
     g.addEdge("PathTracer1.color", "ErrorMeasurePass.Source")
     g.markOutput("ErrorMeasurePass.Output")
 
-    # g.addEdge("PathTracer1.color", "AccumulatePass.input")
-    # g.markOutput("AccumulatePass.output")
+    g.addEdge("PathTracer1.color", "AccumulatePass.input")
+    g.markOutput("AccumulatePass.output")
     return g
 
 PathTracer = render_graph_PathTracer()
