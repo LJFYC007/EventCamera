@@ -83,7 +83,6 @@ void CompressPass::execute(RenderContext* pRenderContext, const RenderData& rend
     auto vars = mpComputePass->getRootVar();
     pRenderContext->clearUAVCounter(mpCompressBuffer, 0);
     vars["input"] = renderData.getTexture(kInputChannelEventImage);
-    vars["output"] = renderData.getTexture(kOutputChannelEventImage);
     vars["buffer_output"] = mpCompressBuffer;
 
     mpComputePass->execute(pRenderContext, uint3(1280, 720, 1));

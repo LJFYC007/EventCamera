@@ -3,7 +3,7 @@ from falcor import *
 def render_graph_PathTracer():
     g = RenderGraph("PathTracer")
     PathTracer = createPass("PathTracer", {
-        'samplesPerPixel': 8,
+        'samplesPerPixel': $SAMPLES_PER_PIXEL$,
         'useNRDDemodulation': False,
         'fixedSeed': 0,
         'maxTransmissionBounces': 0
@@ -20,8 +20,8 @@ def render_graph_PathTracer():
     g.addEdge("VBufferRT.mvec", "PathTracer.mvec")
 
     ErrorMeasurePass = createPass("ErrorMeasurePass", {
-        'threshold': 1.5,
-        'accumulateMax': 100
+        'threshold': $THRESHOLD$,
+        'accumulateMax': $ACCUMULATE_MAX$
     })
     g.addPass(ErrorMeasurePass, "ErrorMeasurePass")
     g.addEdge("PathTracer.color", "ErrorMeasurePass.Reference")
@@ -40,4 +40,4 @@ PathTracer = render_graph_PathTracer()
 try: m.addGraph(PathTracer)
 except NameError: None
 
-m.clock.exitFrame = 1000
+m.clock.exitFrame = $EXIT_FRAME$
