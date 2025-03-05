@@ -4,7 +4,7 @@ def render_graph_PathTracer():
     g = RenderGraph("PathTracer")
     PathTracer = createPass("PathTracer", {'samplesPerPixel': 1})
     g.addPass(PathTracer, "PathTracer")
-    VBufferRT = createPass("VBufferRT", {'samplePattern': 'Stratified', 'sampleCount': 16, 'useAlphaTest': True})
+    VBufferRT = createPass("VBufferRT", {'samplePattern': 'Stratified', 'sampleCount': 64, 'useAlphaTest': True})
     g.addPass(VBufferRT, "VBufferRT")
     AccumulatePass = createPass("AccumulatePass", {'enabled': True, 'precisionMode': 'Single'})
     g.addPass(AccumulatePass, "AccumulatePass")
@@ -22,9 +22,9 @@ PathTracer = render_graph_PathTracer()
 try: m.addGraph(PathTracer)
 except NameError: None
 
-"""
-m.clock.exitFrame = 401
-m.frameCapture.outputDir = "C:\\Users\\-LJF007-\\Documents\\output\\BistroInterior_Wine"
+m.clock.exitFrame = 30 * 60
+m.frameCapture.outputDir = "C:\\Users\\-LJF007-\\Documents\\output\\gt1_zero"
 m.frameCapture.baseFilename = ""
-m.frameCapture.addFrames(m.activeGraph, range(1, 400))
-"""
+
+frames = range(1, 1800)
+m.frameCapture.addFrames(m.activeGraph, frames)

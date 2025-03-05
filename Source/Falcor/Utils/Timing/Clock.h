@@ -44,18 +44,28 @@ public:
     /**
      * Returns the current time.
      */
-    static TimePoint getCurrentTimePoint() { return CpuTimer::getCurrentTimePoint(); }
+    // static TimePoint getCurrentTimePoint() { return CpuTimer::getCurrentTimePoint(); }
 
     /**
      * Update the timer.
+     * Only advances time every mMaxAccumulated calls, allowing multiple samples to be accumulated at the same timestamp.
      * @return The TimePoint of the last update() call. This value is meaningless on its own. Call calcDuration() to get the duration that
      * passed between two TimePoints.
      */
     TimePoint update()
     {
-        auto now = mCurrentTime;
-        mElapsedTime = std::chrono::duration<double>(mTimePeriod);
-        mCurrentTime = TimePoint(mCurrentTime.time_since_epoch() + std::chrono::duration_cast<std::chrono::system_clock::duration>(std::chrono::duration<double>(mTimePeriod)));
+        mCallCounter++;
+
+        // Only update time every mMaxAccumulated calls
+        if (mCallCounter >= mMaxAccumulated) {
+            auto now = mCurrentTime;
+            mElapsedTime = std::chrono::duration<double>(mTimePeriod);
+            mCurrentTime = TimePoint(mCurrentTime.time_since_epoch() + std::chrono::duration_cast<std::chrono::system_clock::duration>(std::chrono::duration<double>(mTimePeriod)));
+            mCallCounter = 0;
+        }
+        else
+            mElapsedTime = std::chrono::duration<double>(0.0);
+
         return mCurrentTime;
     }
 
@@ -76,7 +86,9 @@ public:
 private:
     TimePoint mCurrentTime;
     std::chrono::duration<double> mElapsedTime{0.0};
-    double mTimePeriod = 1.0 / 10000.0; // Fixed time period in seconds
+    double mTimePeriod = 1.0 / 120.0; // Fixed time period in seconds
+    uint32_t mCallCounter = 0;       // Counter to track calls to update()
+    const uint mMaxAccumulated = 1;
 };
 
 /*
