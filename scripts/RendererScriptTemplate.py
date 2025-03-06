@@ -7,7 +7,7 @@ def render_graph_PathTracer():
         'useNRDDemodulation': False,
         'fixedSeed': 0,
         'maxTransmissionBounces': 0,
-        'useRussianRoulette': True
+        'useRussianRoulette': $RUSSIAN_ROULETTE$,
     })
     g.addPass(PathTracer, "PathTracer")
 
@@ -22,7 +22,8 @@ def render_graph_PathTracer():
 
     ErrorMeasurePass = createPass("ErrorMeasurePass", {
         'threshold': $THRESHOLD$,
-        'accumulateMax': $ACCUMULATE_MAX$
+        'needAccumulatedEvents': $NEED_ACCUMULATED_EVENTS$,
+        'toleranceEvents': $TOLERANCE_EVENTS$,
     })
     g.addPass(ErrorMeasurePass, "ErrorMeasurePass")
     g.addEdge("PathTracer.color", "ErrorMeasurePass.Reference")

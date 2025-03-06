@@ -140,7 +140,8 @@ private:
     uint2 mFrameDim = {0, 0};
 
     bool mReset = false;
-    uint mAccumulatedMax = 1;
+    uint mNeedAccumulatedEvents = 1;
+    uint mToleranceEvents = 0;
     float threshold = 0.5f;
 
     ref<Texture> mpLastEvent;

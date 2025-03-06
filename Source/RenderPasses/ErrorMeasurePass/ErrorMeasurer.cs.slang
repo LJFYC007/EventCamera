@@ -34,24 +34,43 @@ cbuffer PerFrameCB
     uint2 gResolution;
     float gThreshold;
     uint gMethod;
-    uint gAccumulatedMax;
+    uint gNeedAccumulatedEvents;
+    uint gToleranceEvents;
 };
 
 RWTexture2D<float4> gResult;
 RWTexture2D<float> gLastEvent;
-RWTexture2D<float> gRecentSum;
-RWTexture2D<uint> gRecentCount;
+RWTexture2DArray<float> gRecentSum;
+RWTexture2DArray<uint> gRecentCount;
+RWTexture2D<uint> gCurrentIndex;
 
 void clearRecentStatus(uint2 pixel)
 {
-    gRecentSum[pixel] = 0.f;
-    gRecentCount[pixel] = 0;
+    for (int i = 0; i < 5; ++i)
+    {
+        gRecentSum[uint3(pixel, i)] = 0.f;
+        gRecentCount[uint3(pixel, i)] = 0;
+    }
+}
+
+void missEvent(uint2 pixel)
+{
+    for (int i = 3; i >= 0; --i)
+    {
+        gRecentSum[uint3(pixel, i + 1)] = gRecentSum[uint3(pixel, i)];
+        gRecentCount[uint3(pixel, i + 1)] = gRecentCount[uint3(pixel, i)];
+    }
+    gRecentSum[uint3(pixel, 0)] = 0.f;
+    gRecentCount[uint3(pixel, 0)] = 0;
 }
 
 void updateRecentStatus(uint2 pixel, float illuminance)
 {
-    gRecentSum[pixel] += illuminance;
-    gRecentCount[pixel] ++;
+    for (int i = 0; i < 5; ++i)
+    {
+        gRecentSum[uint3(pixel, i)] += illuminance;
+        gRecentCount[uint3(pixel, i)]++;
+    }
 }
 
 [numthreads(16, 16, 1)]
@@ -64,6 +83,7 @@ void main(uint3 DTid: SV_DispatchThreadID)
     gResult[pixel] = float4(0.f);
     float nowI = 0.299f * gSource[pixel].r + 0.587f * gSource[pixel].g + 0.114f * gSource[pixel].b;
     float preI = gLastEvent[pixel];
+    updateRecentStatus(pixel, nowI);
 
     float diff = log10(nowI / preI);
     bool type;
@@ -71,18 +91,20 @@ void main(uint3 DTid: SV_DispatchThreadID)
     else if (diff < -gThreshold) type = true;
     else
     {
-        clearRecentStatus(pixel);
+        missEvent(pixel);
         return;
     }
 
-    bool lastType = gRecentSum[pixel] > preI * gRecentCount[pixel] ? false : true;
-    if (lastType != type || gRecentCount[pixel] == 0)
-        clearRecentStatus(pixel);
-
-    updateRecentStatus(pixel, nowI);
-    if (gRecentCount[pixel] == gAccumulatedMax)
+    bool lastType = gRecentSum[uint3(pixel, 0)] > preI * gRecentCount[uint3(pixel, 0)] ? false : true;
+    if (lastType != type)
     {
-        gLastEvent[pixel] = gRecentSum[pixel] / gAccumulatedMax;
+        missEvent(pixel);
+        return;
+    }
+
+    if (gRecentCount[uint3(pixel, gToleranceEvents)] == gNeedAccumulatedEvents)
+    {
+        gLastEvent[pixel] = gRecentSum[uint3(pixel, gToleranceEvents)] / gNeedAccumulatedEvents;
         clearRecentStatus(pixel);
         gResult[pixel] = type ? float4(0.f, 1.f, 0.f, 0.f) : float4(1.f, 0.f, 0.f, 0.f);
     }

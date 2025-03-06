@@ -21,6 +21,7 @@ def create_video_from_bin():
     output_dir = os.path.join(work_dir, "output", script_config.get('directory', 'Temp'))
     video_FPS = config.get('videoFPS', 60)
     time_window_ms = script_config.get('timeScale', 10000) / 60 # it should be the video fps
+    # need_accumulated_events = script_config.get('needAccumulatedEvents', 100)
 
     bin_files = sorted(glob(os.path.join(output_dir, "data-*.bin")),
                        key=lambda x: int(x.split('-')[-1].split('.')[0]))

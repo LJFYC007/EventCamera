@@ -54,7 +54,8 @@ const std::string kReportRunningError = "ReportRunningError";
 const std::string kRunningErrorSigma = "RunningErrorSigma";
 const std::string kSelectedOutputId = "SelectedOutputId";
 const std::string kThreshold = "threshold";
-const std::string kAccumulateMax = "accumulateMax";
+const std::string kNeedAccumulatedEvents = "needAccumulatedEvents";
+const std::string kToleranceEvents = "toleranceEvents";
 } // namespace
 
 extern "C" FALCOR_API_EXPORT void registerPlugin(Falcor::PluginRegistry& registry)
@@ -93,8 +94,10 @@ ErrorMeasurePass::ErrorMeasurePass(ref<Device> pDevice, const Properties& props)
             mSelectedOutputId = value;
         else if (key == kThreshold)
             threshold = value;
-        else if (key == kAccumulateMax)
-            mAccumulatedMax = value;
+        else if (key == kNeedAccumulatedEvents)
+            mNeedAccumulatedEvents = value;
+        else if (key == kToleranceEvents)
+            mToleranceEvents = value;
         else
         {
             logWarning("Unknown property '{}' in ErrorMeasurePass properties.", key);
@@ -122,7 +125,8 @@ Properties ErrorMeasurePass::getProperties() const
     props[kRunningErrorSigma] = mRunningErrorSigma;
     props[kSelectedOutputId] = mSelectedOutputId;
     props[kThreshold] = threshold;
-    props[kAccumulateMax] = mAccumulatedMax;
+    props[kNeedAccumulatedEvents] = mNeedAccumulatedEvents;
+    props[kToleranceEvents] = mToleranceEvents;
     return props;
 }
 
@@ -225,7 +229,8 @@ void ErrorMeasurePass::runDifferencePass(RenderContext* pRenderContext, const Re
     // Set constant buffer parameters.
     const uint2 resolution = uint2(pSourceTexture->getWidth(), pSourceTexture->getHeight());
     var[kConstantBufferName]["gResolution"] = resolution;
-    var[kConstantBufferName]["gAccumulatedMax"] = mAccumulatedMax;
+    var[kConstantBufferName]["gNeedAccumulatedEvents"] = mNeedAccumulatedEvents;
+    var[kConstantBufferName]["gToleranceEvents"] = mToleranceEvents;
     var[kConstantBufferName]["gThreshold"] = threshold;
     var[kConstantBufferName]["gMethod"] = (uint32_t)mMethod;
     var["gLastEvent"] = mpLastEvent;
@@ -319,7 +324,11 @@ void ErrorMeasurePass::renderUI(Gui::Widgets& widget)
         reset();
     }
 
-    if (widget.var("Max accumulated threshold", mAccumulatedMax, 1u, 400u))
+    if (widget.var("The number of events needed to accumulate", mNeedAccumulatedEvents, 1u, 400u))
+    {
+        reset();
+    }
+    if (widget.var("The number of tolerance events", mToleranceEvents, 0u, 4u))
     {
         reset();
     }
@@ -412,7 +421,7 @@ void ErrorMeasurePass::prepareAccumulation(RenderContext* pRenderContext, uint32
 {
     // Allocate/resize/clear buffers for intermedate data. These are different depending on accumulation mode.
     // Buffers that are not used in the current mode are released.
-    auto prepareBuffer = [&](ref<Texture>& pBuf, ResourceFormat format, bool bufUsed)
+    auto prepareBuffer = [&](ref<Texture>& pBuf, ResourceFormat format, bool bufUsed, uint32_t arraySize = 1)
     {
         if (!bufUsed)
         {
@@ -423,7 +432,7 @@ void ErrorMeasurePass::prepareAccumulation(RenderContext* pRenderContext, uint32
         if (!pBuf || pBuf->getWidth() != width || pBuf->getHeight() != height)
         {
             pBuf = mpDevice->createTexture2D(
-                width, height, format, 1, 1, nullptr, ResourceBindFlags::ShaderResource | ResourceBindFlags::UnorderedAccess
+                width, height, format, arraySize, 1, nullptr, ResourceBindFlags::ShaderResource | ResourceBindFlags::UnorderedAccess
             );
             FALCOR_ASSERT(pBuf);
             reset();
@@ -440,6 +449,6 @@ void ErrorMeasurePass::prepareAccumulation(RenderContext* pRenderContext, uint32
     };
 
     prepareBuffer(mpLastEvent, ResourceFormat::R32Float, true);
-    prepareBuffer(mpRecentCount, ResourceFormat::R32Float, true);
-    prepareBuffer(mpRecentSum, ResourceFormat::R32Uint, true);
+    prepareBuffer(mpRecentCount, ResourceFormat::R32Float, true, 5);
+    prepareBuffer(mpRecentSum, ResourceFormat::R32Uint, true, 5);
 }

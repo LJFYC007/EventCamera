@@ -40,8 +40,10 @@ def run(args):
 
     # Extract parameters from config
     samples_per_pixel = script_config.get('samplesPerPixel', 8)
+    russian_roulette = script_config.get('russianRoulette', True)
     threshold = script_config.get('threshold', 1.5)
-    accumulate_max = script_config.get('accumulateMax', 100)
+    need_accumulated_events = script_config.get('needAccumulatedEvents', 100)
+    tolerance_events = script_config.get('toleranceEvents', 0.1)
     enable_compress = script_config.get('enableCompress', True)
     directory = script_config.get('directory', 'Temp')
 
@@ -53,8 +55,10 @@ def run(args):
 
     parameters = {
         "SAMPLES_PER_PIXEL": samples_per_pixel,
+        "RUSSIAN_ROULETTE": russian_roulette,
         "THRESHOLD": threshold,
-        "ACCUMULATE_MAX": accumulate_max,
+        "NEED_ACCUMULATED_EVENTS": need_accumulated_events,
+        "TOLERANCE_EVENTS": tolerance_events,
         "EXIT_FRAME": exit_frame,
         "ENABLED": enable_compress,
         "TIME_SCALE": time_scale,
