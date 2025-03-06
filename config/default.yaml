@@ -5,12 +5,12 @@ verbosity: 2
 scene: 0 # 0 is the bistro interior, 1 is the bistro exterior, 2 is the measure_one
 script:
   name: "EventCamera"
-  samplesPerPixel: 8
+  samplesPerPixel: 4
   threshold: 1.5
   accumulateMax: 100
   enableCompress: True
   directory: "Temp"
   timeScale: 10000 # meas 0.1ms per frame, in the contect of animation
-  exitFrame: 5000 # 0 means never exit
-videoFPS: 5
-outputFile: "BistroInterior_Wine"
+  exitFrame: 20000 # 0 means never exit
+videoFPS: 10
+outputFile: "BistroInterior_Wine_4spp"

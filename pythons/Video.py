@@ -70,7 +70,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Run the main process using Run.py
-    # run(args)
+    run(args)
 
     # Create video from bin files
     create_video_from_bin()
