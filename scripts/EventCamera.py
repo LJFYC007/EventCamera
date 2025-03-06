@@ -29,7 +29,10 @@ def render_graph_PathTracer():
 
     g.markOutput("ErrorMeasurePass.Output")
 
-    CompressPass = createPass("CompressPass")
+    CompressPass = createPass("CompressPass", {
+        'enabled': True,
+        'directory': "C:\\Users\\-LJF007-\\Documents\\EventCamera\\..\\output\\Temp",
+    })
     g.addPass(CompressPass, "CompressPass")
     g.addEdge("ErrorMeasurePass.Output", "CompressPass.input")
 
@@ -40,4 +43,5 @@ PathTracer = render_graph_PathTracer()
 try: m.addGraph(PathTracer)
 except NameError: None
 
-m.clock.exitFrame = 1000
+m.clock.exitFrame = 5000
+m.clock.timeScale = 10000

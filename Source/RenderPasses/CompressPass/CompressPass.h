@@ -50,6 +50,8 @@ public:
     virtual bool onKeyEvent(const KeyboardEvent& keyEvent) override { return false; }
 
 private:
+    void prepareResources();
+
     /// GPU buffer used for compression operations
     ref<Buffer> mpCompressBuffer;
     /// CPU-readable buffer for transferring compressed data from GPU
@@ -58,4 +60,13 @@ private:
     ref<ComputePass> mpComputePass;
     /// The current scene (or nullptr if no scene)
     ref<Scene> mpScene;
+
+    /// Current frame dimension in pixels.
+    uint2 mFrameDim = {0, 0};
+    //// True if we store to disk data
+    bool mEnabled = true;
+    /// Path to the directory where we store compressed data
+    std::string mDirectoryPath;
+    /// Number of current frame
+    uint32_t mFrame = 0;
 };

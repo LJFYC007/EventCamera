@@ -29,7 +29,10 @@ def render_graph_PathTracer():
 
     g.markOutput("ErrorMeasurePass.Output")
 
-    CompressPass = createPass("CompressPass")
+    CompressPass = createPass("CompressPass", {
+        'enabled': $ENABLED$,
+        'directory': "$DIRECTORY$",
+    })
     g.addPass(CompressPass, "CompressPass")
     g.addEdge("ErrorMeasurePass.Output", "CompressPass.input")
 
@@ -41,3 +44,4 @@ try: m.addGraph(PathTracer)
 except NameError: None
 
 m.clock.exitFrame = $EXIT_FRAME$
+m.clock.timeScale = $TIME_SCALE$

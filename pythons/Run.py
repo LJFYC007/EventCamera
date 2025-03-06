@@ -3,6 +3,7 @@ import yaml
 import subprocess
 import argparse
 import TemplateInstantiate
+import time
 
 root_dir = "C:\\Users\\-LJF007-\\Documents\\EventCamera"
 
@@ -41,13 +42,23 @@ def run(args):
     samples_per_pixel = script_config.get('samplesPerPixel', 8)
     threshold = script_config.get('threshold', 1.5)
     accumulate_max = script_config.get('accumulateMax', 100)
-    exit_frame = script_config.get('exitFrame', 10000000)
+    enable_compress = script_config.get('enableCompress', True)
+    directory = script_config.get('directory', 'Temp')
+
+    time_scale = script_config.get('timeScale', 10000.0)
+    exit_frame = script_config.get('exitFrame', 0)
+
+    if not os.path.exists(os.path.join(root_dir, '..\\output', directory)):
+        os.makedirs(os.path.join(root_dir, '..\\output', directory))
 
     parameters = {
         "SAMPLES_PER_PIXEL": samples_per_pixel,
         "THRESHOLD": threshold,
         "ACCUMULATE_MAX": accumulate_max,
         "EXIT_FRAME": exit_frame,
+        "ENABLED": enable_compress,
+        "TIME_SCALE": time_scale,
+        "DIRECTORY": f"C:\\\\Users\\\\-LJF007-\\\\Documents\\\\EventCamera\\\\..\\\\output\\\\{directory}"
     }
     TemplateInstantiate.instantiate_template(template_path, script_output, parameters)
 
@@ -60,9 +71,11 @@ def run(args):
 
     try:
         print(f"Running: {' '.join(cmd)}")
+        start_time = time.time()
         process = subprocess.Popen(cmd, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
         process.wait()
-        print("Execution completed successfully.")
+        execution_time = time.time() - start_time
+        print(f"Execution completed successfully in {execution_time:.2f} seconds ({execution_time/60:.2f} minutes).")
     except FileNotFoundError:
         print(f"Error: Mogwai.exe not found at path: {mogwai_path}")
     except Exception as e:

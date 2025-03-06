@@ -37,20 +37,42 @@ namespace
 {
 const std::string kInputChannelEventImage = "input";
 const std::string kOutputChannelEventImage = "output";
+const std::string kEnabled = "enabled";
+const std::string kDirectory = "directory";
 } // namespace
+
+void CompressPass::prepareResources()
+{
+    if ( mFrameDim.x == 0 || mFrameDim.y == 0 )
+        return;
+    auto vbBindFlags = ResourceBindFlags::ShaderResource | ResourceBindFlags::UnorderedAccess | ResourceBindFlags::Shared;
+    size_t type_size = sizeof(uint4); // Align to 16 bytes
+    mpCompressBuffer = mpDevice->createStructuredBuffer(type_size, mFrameDim.x * mFrameDim.y, vbBindFlags, MemoryType::DeviceLocal, nullptr, true);
+
+    mpReadbackBuffer = mpDevice->createBuffer(mpCompressBuffer->getSize(), ResourceBindFlags::None, MemoryType::ReadBack);
+}
 
 CompressPass::CompressPass(ref<Device> pDevice, const Properties& props) : RenderPass(pDevice)
 {
-    auto vbBindFlags = ResourceBindFlags::ShaderResource | ResourceBindFlags::UnorderedAccess | ResourceBindFlags::Shared;
-    size_t type_size = sizeof(uint4); // Align to 16 bytes
-    mpCompressBuffer = mpDevice->createStructuredBuffer(type_size, 1280 * 720, vbBindFlags, MemoryType::DeviceLocal, nullptr, true);
+    for (const auto& [key, value] : props)
+    {
+        if (key == kEnabled)
+            mEnabled = value;
+        if (key == kDirectory)
+            mDirectoryPath = props.get<std::string>(key);
+        else
+            logWarning("Unknown property '{}' in CompressPass properties.", key);
+    }
 
-    mpReadbackBuffer = pDevice->createBuffer(mpCompressBuffer->getSize(), ResourceBindFlags::None, MemoryType::ReadBack);
+    prepareResources();
 }
 
 Properties CompressPass::getProperties() const
 {
-    return {};
+    Properties props;
+    props[kEnabled] = mEnabled;
+    props[kDirectory] = mDirectoryPath;
+    return props;
 }
 
 RenderPassReflection CompressPass::reflect(const CompileData& compileData)
@@ -80,12 +102,25 @@ void CompressPass::execute(RenderContext* pRenderContext, const RenderData& rend
         mpComputePass = ComputePass::create(mpDevice, desc, defines);
     }
 
+    if ( !mEnabled )
+        return ;
+    mFrame ++;
+
+    ref<Texture> inputTexture = renderData.getTexture(kInputChannelEventImage);
+    const uint2 resolution = uint2(inputTexture->getWidth(), inputTexture->getHeight());
+    if (any(resolution != mFrameDim))
+    {
+        mFrameDim = resolution;
+        prepareResources();
+    }
+
     auto vars = mpComputePass->getRootVar();
     pRenderContext->clearUAVCounter(mpCompressBuffer, 0);
-    vars["input"] = renderData.getTexture(kInputChannelEventImage);
+    vars["input"] = inputTexture;
     vars["buffer_output"] = mpCompressBuffer;
+    vars["PerFrameCB"]["gResolution"] = mFrameDim;
 
-    mpComputePass->execute(pRenderContext, uint3(1280, 720, 1));
+    mpComputePass->execute(pRenderContext, uint3(mFrameDim, 1));
 
     ref<Buffer> pCounterBuffer = mpCompressBuffer->getUAVCounter();
     pRenderContext->copyBufferRegion(mpReadbackBuffer.get(), 0, pCounterBuffer.get(), 0, pCounterBuffer->getSize());
@@ -98,11 +133,13 @@ void CompressPass::execute(RenderContext* pRenderContext, const RenderData& rend
     pRenderContext->copyBufferRegion(mpReadbackBuffer.get(), 0, mpCompressBuffer.get(), 0, pDataSize);
     mpDevice->wait();
     const uint4* data = reinterpret_cast<const uint4*>(mpReadbackBuffer->map());
-    std::string filename = "C:\\Users\\-LJF007-\\Documents\\output\\output.bin";
+    std::string filename = mDirectoryPath + "\\data-" + std::to_string(mFrame) + ".bin";
     std::ofstream file(filename, std::ios::binary);
     file.write(reinterpret_cast<const char*>(data), pDataSize);
     file.close();
     mpReadbackBuffer->unmap();
 }
 
-void CompressPass::renderUI(Gui::Widgets& widget) {}
+void CompressPass::renderUI(Gui::Widgets& widget) {
+    widget.checkbox("Enabled", mEnabled);
+}

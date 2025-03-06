@@ -46,6 +46,8 @@ public:
      */
     static TimePoint getCurrentTimePoint() { return CpuTimer::getCurrentTimePoint(); }
 
+    StableTimer(double timePreiod = 1.0 / 60.0) : mTimePeriod(timePreiod) { }
+
     /**
      * Update the timer.
      * @return The TimePoint of the last update() call. This value is meaningless on its own. Call calcDuration() to get the duration that
@@ -76,7 +78,7 @@ public:
 private:
     TimePoint mCurrentTime;
     std::chrono::duration<double> mElapsedTime{0.0};
-    double mTimePeriod = 1.0 / 60.0; // Fixed time period in seconds
+    double mTimePeriod = 0.0;
 };
 
 /*
@@ -220,7 +222,8 @@ public:
      */
     Clock& setTimeScale(double scale)
     {
-        mScale = scale;
+        // mScale = scale;
+        mTimer = StableTimer(1.0 / scale);
         return *this;
     }
 

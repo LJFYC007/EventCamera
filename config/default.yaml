@@ -1,6 +1,6 @@
 name: "default"
 build: "Release"
-headless: False
+headless: True
 verbosity: 2
 scene: 0 # 0 is the bistro interior, 1 is the bistro exterior, 2 is the measure_one
 script:
@@ -8,5 +8,8 @@ script:
   samplesPerPixel: 8
   threshold: 1.5
   accumulateMax: 100
-  exitFrame: 1000
+  enableCompress: True
+  directory: "Temp"
+  timeScale: 10000 # meas 0.1ms per frame, in the contect of animation
+  exitFrame: 5000 # 0 means never exit
 
