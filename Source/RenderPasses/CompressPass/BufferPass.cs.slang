@@ -1,5 +1,5 @@
 Texture2D<float4> input;
-RWStructuredBuffer<uint4> buffer_output;
+RWStructuredBuffer<uint> buffer_output;
 
 cbuffer PerFrameCB
 {
@@ -18,12 +18,12 @@ void main(uint3 dispatchThreadID: SV_DispatchThreadID)
         if (color.x > 0.f)
         {
             uint id = buffer_output.IncrementCounter();
-            buffer_output[id] = uint4(tex_coord.xy, 0, 0);
+            buffer_output[id] = index * 2;
         }
         else if (color.y > 0.f)
         {
             uint id = buffer_output.IncrementCounter();
-            buffer_output[id] = uint4(tex_coord.xy, 1, 0);
+            buffer_output[id] = index * 2 + 1;
         }
     }
 }

@@ -35,9 +35,11 @@ def create_video_from_bin():
     event_frame = np.zeros((video_height, video_width), dtype=np.uint8)
     for frame_idx, bin_file in enumerate(tqdm(bin_files, desc="Processing bin files")):
         data = np.fromfile(bin_file, dtype=np.uint32)
-        events_data = data.reshape(-1, 4)
-
-        for x, y, pol, _ in events_data:
+        for value in data:
+            pol = value % 2
+            value //= 2
+            x = value % video_width
+            y = value // video_width
             if 0 <= x < video_width and 0 <= y < video_height:
                 event_frame[y, x] = pol + 1
                 combined_data.append([x, y, pol, frame_idx])

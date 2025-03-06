@@ -319,7 +319,7 @@ void ErrorMeasurePass::renderUI(Gui::Widgets& widget)
         reset();
     }
 
-    if (widget.var("Max accumulated threshold", mAccumulatedMax, 1u, 100u))
+    if (widget.var("Max accumulated threshold", mAccumulatedMax, 1u, 400u))
     {
         reset();
     }

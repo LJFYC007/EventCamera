@@ -7,10 +7,10 @@ script:
   name: "EventCamera"
   samplesPerPixel: 4
   threshold: 1.5
-  accumulateMax: 100
+  accumulateMax: 400
   enableCompress: True
   directory: "Temp"
   timeScale: 10000 # meas 0.1ms per frame, in the contect of animation
   exitFrame: 20000 # 0 means never exit
 videoFPS: 10
-outputFile: "BistroInterior_Wine_4spp"
+outputFile: "BistroInterior_Wine_4spp_russian_400"

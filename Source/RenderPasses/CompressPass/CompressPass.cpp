@@ -46,7 +46,7 @@ void CompressPass::prepareResources()
     if ( mFrameDim.x == 0 || mFrameDim.y == 0 )
         return;
     auto vbBindFlags = ResourceBindFlags::ShaderResource | ResourceBindFlags::UnorderedAccess | ResourceBindFlags::Shared;
-    size_t type_size = sizeof(uint4); // Align to 16 bytes
+    size_t type_size = sizeof(uint);
     mpCompressBuffer = mpDevice->createStructuredBuffer(type_size, mFrameDim.x * mFrameDim.y, vbBindFlags, MemoryType::DeviceLocal, nullptr, true);
 
     mpReadbackBuffer = mpDevice->createBuffer(mpCompressBuffer->getSize(), ResourceBindFlags::None, MemoryType::ReadBack);
@@ -126,13 +126,13 @@ void CompressPass::execute(RenderContext* pRenderContext, const RenderData& rend
     pRenderContext->copyBufferRegion(mpReadbackBuffer.get(), 0, pCounterBuffer.get(), 0, pCounterBuffer->getSize());
     mpDevice->wait();
     const uint32_t pCounterValue = *static_cast<const uint32_t*>(mpReadbackBuffer->map());
-    const uint32_t pDataSize = pCounterValue* sizeof(uint4);
+    const uint32_t pDataSize = pCounterValue* sizeof(uint);
     mpReadbackBuffer->unmap();
 
     // Map the CPU buffer and write to file
     pRenderContext->copyBufferRegion(mpReadbackBuffer.get(), 0, mpCompressBuffer.get(), 0, pDataSize);
     mpDevice->wait();
-    const uint4* data = reinterpret_cast<const uint4*>(mpReadbackBuffer->map());
+    const uint* data = reinterpret_cast<const uint*>(mpReadbackBuffer->map());
     std::string filename = mDirectoryPath + "\\data-" + std::to_string(mFrame) + ".bin";
     std::ofstream file(filename, std::ios::binary);
     file.write(reinterpret_cast<const char*>(data), pDataSize);
