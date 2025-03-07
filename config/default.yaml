@@ -7,12 +7,12 @@ script:
   name: "EventCamera"
   samplesPerPixel: 8
   russianRoulette: True
-  threshold: 1.5
+  threshold: 1.7
   needAccumulatedEvents: 100
   toleranceEvents: 4
   enableCompress: True
   directory: "Temp"
-  timeScale: 10000 # meas 0.1ms per frame, in the contect of animation
-  exitFrame: 200000 # 0 means never exit
-videoFPS: 60
-outputFile: "BistroInterior_Wine_8spp_4tolerance"
+  timeScale: 10000 # meas 0.1ms per frame, in the context of animation
+  exitFrame: 20000 # 0 means never exit
+videoFPS: 20
+outputFile: "BistroInterior_Wine_8spp_4tolerance_1.7threshold_fixedseed"

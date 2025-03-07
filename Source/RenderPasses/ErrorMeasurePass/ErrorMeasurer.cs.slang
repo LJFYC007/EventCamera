@@ -85,10 +85,10 @@ void main(uint3 DTid: SV_DispatchThreadID)
     float preI = gLastEvent[pixel];
     updateRecentStatus(pixel, nowI);
 
-    float diff = log10(nowI / preI);
+    float diff = nowI / preI;
     bool type;
     if (diff > gThreshold) type = false;
-    else if (diff < -gThreshold) type = true;
+    else if (diff < 1.0f / gThreshold) type = true;
     else
     {
         missEvent(pixel);
