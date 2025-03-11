@@ -86,7 +86,7 @@ public:
 private:
     TimePoint mCurrentTime;
     std::chrono::duration<double> mElapsedTime{0.0};
-    double mTimePeriod = 1.0 / 120.0; // Fixed time period in seconds
+    double mTimePeriod = 1.0 / 10000.0; // Fixed time period in seconds
     uint32_t mCallCounter = 0;       // Counter to track calls to update()
     const uint mMaxAccumulated = 1;
 };
