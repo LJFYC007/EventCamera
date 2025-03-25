@@ -1,6 +1,6 @@
 name: "default"
 build: "Release"
-headless: True
+headless: False
 verbosity: 2
 scene: 0 # 0 is the bistro interior, 1 is the bistro exterior, 2 is the measure_one
 script:
@@ -15,4 +15,4 @@ script:
   timeScale: 10000 # meas 0.1ms per frame, in the context of animation
   exitFrame: 20000 # 0 means never exit
 videoFPS: 20
-outputFile: "BistroInterior_Wine_8spp_4tolerance_1.7threshold_fixedseed"
+outputFile: "BistroInterior_Wine_8spp_4tolerance_1.7threshold"

@@ -5,7 +5,7 @@ import argparse
 import TemplateInstantiate
 import time
 
-root_dir = "C:\\Users\\-LJF007-\\Documents\\EventCamera"
+root_dir = "C:\\Users\\pengfei\\workspace\\EventCamera"
 
 # 0 is "..\Scenes\Bistro_v5_2\BistroInterior_Wine.pyscene"
 # 1 is "..\Scenes\Bistro_v5_2\BistroExterior.pyscene"
@@ -62,7 +62,7 @@ def run(args):
         "EXIT_FRAME": exit_frame,
         "ENABLED": enable_compress,
         "TIME_SCALE": time_scale,
-        "DIRECTORY": f"C:\\\\Users\\\\-LJF007-\\\\Documents\\\\EventCamera\\\\..\\\\output\\\\{directory}"
+        "DIRECTORY": f"C:\\\\Users\\\\pengfei\\\\workspace\\\\EventCamera\\\\..\\\\output\\\\{directory}"
     }
     TemplateInstantiate.instantiate_template(template_path, script_output, parameters)
 

@@ -10,7 +10,7 @@ import yaml
 import struct
 from Run import run
 
-work_dir = r"C:\Users\-LJF007-\Documents"
+work_dir = r"C:\\Users\\pengfei\\workspace"
 video_width = 1280
 video_height = 720
 

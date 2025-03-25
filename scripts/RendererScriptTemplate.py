@@ -5,7 +5,6 @@ def render_graph_PathTracer():
     PathTracer = createPass("PathTracer", {
         'samplesPerPixel': $SAMPLES_PER_PIXEL$,
         'useNRDDemodulation': False,
-        'fixedSeed': 0,
         'maxTransmissionBounces': 0,
         'useRussianRoulette': $RUSSIAN_ROULETTE$,
     })

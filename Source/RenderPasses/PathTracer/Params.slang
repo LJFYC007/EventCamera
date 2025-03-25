@@ -80,7 +80,7 @@ __exported import Utils.Math.BitTricks;
 struct PathTracerParams
 {
     int     useFixedSeed = false;       ///< Use fixed random seed. This is useful for debugging.
-    uint    fixedSeed = 1;              ///< The seed to use when 'useFixedSeed' is enabled.
+    uint    fixedSeed = 0;              ///< The seed to use when 'useFixedSeed' is enabled.
     float   lodBias = 0.f;              ///< LOD bias applied to secondary hits.
     float   specularRoughnessThreshold = 0.25f; ///< Specular reflection events are only classified as specular if the material's roughness value is equal or smaller than this threshold. Otherwise they are classified diffuse.
 

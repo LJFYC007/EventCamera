@@ -6,7 +6,7 @@ from glob import glob
 import numpy as np
 from tqdm import tqdm
 
-work_dir = r"C:\Users\-LJF007-\Documents"
+work_dir = r"C:\\Users\\pengfei\\workspace"
 output_dir = os.path.join(work_dir, "output", "gt2048")
 
 video_width = 1920

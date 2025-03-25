@@ -24,7 +24,7 @@ except NameError: None
 
 """
 m.clock.exitFrame = 401
-m.frameCapture.outputDir = "C:\\Users\\-LJF007-\\Documents\\output\\BistroInterior_Wine"
+m.frameCapture.outputDir = "C:\\Users\\pengfei\\workspace\\output\\BistroInterior_Wine"
 m.frameCapture.baseFilename = ""
 m.frameCapture.addFrames(m.activeGraph, range(1, 400))
 """
