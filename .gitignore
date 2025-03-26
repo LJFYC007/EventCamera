@@ -33,3 +33,6 @@
 *.swp
 
 /scripts/EventCamera.py
+
+
+test_tiles/

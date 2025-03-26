@@ -45,6 +45,7 @@ def run(args):
     need_accumulated_events = script_config.get('needAccumulatedEvents', 100)
     tolerance_events = script_config.get('toleranceEvents', 0.1)
     enable_compress = script_config.get('enableCompress', True)
+    enable_block_storage = script_config.get('enableBlockStorage', False)
     directory = script_config.get('directory', 'Temp')
 
     time_scale = script_config.get('timeScale', 10000.0)
@@ -61,6 +62,7 @@ def run(args):
         "TOLERANCE_EVENTS": tolerance_events,
         "EXIT_FRAME": exit_frame,
         "ENABLED": enable_compress,
+        "BLOCK_STORAGE_ENABLED": enable_block_storage,
         "TIME_SCALE": time_scale,
         "DIRECTORY": f"C:\\\\Users\\\\pengfei\\\\workspace\\\\EventCamera\\\\..\\\\output\\\\{directory}"
     }

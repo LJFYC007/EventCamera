@@ -11,6 +11,7 @@ script:
   needAccumulatedEvents: 100
   toleranceEvents: 4
   enableCompress: True
+  enableBlockStorage : True
   directory: "Temp"
   timeScale: 10000 # meas 0.1ms per frame, in the context of animation
   exitFrame: 20000 # 0 means never exit
