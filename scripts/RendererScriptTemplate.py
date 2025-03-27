@@ -39,14 +39,30 @@ def render_graph_PathTracer():
 
     BlockStoragePass = createPass("BlockStoragePass", {
         'enabled': $BLOCK_STORAGE_ENABLED$,
-        'directory': "$DIRECTORY$",
+        'directory': "$DIRECTORY$/Output",
     })
     g.addPass(BlockStoragePass, "BlockStoragePass")
     g.addEdge("PathTracer.color", "BlockStoragePass.input")
 
+    BlockStoragePassDI = createPass("BlockStoragePass", {
+        'enabled': $BLOCK_STORAGE_ENABLED$,
+        'directory': "$DIRECTORY$/OutputDI",
+    })
+    g.addPass(BlockStoragePassDI, "BlockStoragePassDI")
+    g.addEdge("PathTracer.DI", "BlockStoragePassDI.input")
+
+    BlockStoragePassGI = createPass("BlockStoragePass", {
+        'enabled': $BLOCK_STORAGE_ENABLED$,
+        'directory': "$DIRECTORY$/OutputGI",
+    })
+    g.addPass(BlockStoragePassGI, "BlockStoragePassGI")
+    g.addEdge("PathTracer.GI", "BlockStoragePassGI.input")
+
 
     # g.markOutput("CompressPass.output")
     g.markOutput("BlockStoragePass.output")
+    g.markOutput("BlockStoragePassDI.output")
+    g.markOutput("BlockStoragePassGI.output")
 
     return g
 

@@ -40,6 +40,8 @@ import GuideData;
 ParameterBlock<PathTracer> pathTracer;
 
 StructuredBuffer<ColorType> sampleColor;
+StructuredBuffer<ColorType> sampleColorDI;
+StructuredBuffer<ColorType> sampleColorGI;
 StructuredBuffer<GuideData> sampleGuideData;
 StructuredBuffer<NRDRadiance> sampleNRDRadiance;
 StructuredBuffer<float> sampleNRDHitDist;

@@ -54,6 +54,8 @@ namespace
     };
 
     const std::string kOutputColor = "color";
+    const std::string kOutputDI = "DI";
+    const std::string kOutputGI = "GI";
     const std::string kOutputAlbedo = "albedo";
     const std::string kOutputSpecularAlbedo = "specularAlbedo";
     const std::string kOutputIndirectAlbedo = "indirectAlbedo";
@@ -83,6 +85,8 @@ namespace
     const Falcor::ChannelList kOutputChannels =
     {
         { kOutputColor,                                     "",     "Output color (linear)", true /* optional */, ResourceFormat::RGBA32Float },
+        { kOutputDI,                                        "",     "Direct Lighting", true /* optional */, ResourceFormat::RGBA32Float },
+        { kOutputGI,                                        "",     "Indirect Lighting", true /* optional */, ResourceFormat::RGBA32Float },
         { kOutputAlbedo,                                    "",     "Output albedo (linear)", true /* optional */, ResourceFormat::RGBA8Unorm },
         { kOutputSpecularAlbedo,                            "",     "Output specular albedo (linear)", true /* optional */, ResourceFormat::RGBA8Unorm },
         { kOutputIndirectAlbedo,                            "",     "Output indirect albedo (linear)", true /* optional */, ResourceFormat::RGBA8Unorm },
@@ -885,6 +889,18 @@ void PathTracer::prepareResources(RenderContext* pRenderContext, const RenderDat
             mpSampleColor = mpDevice->createStructuredBuffer(var["sampleColor"], sampleCount, ResourceBindFlags::ShaderResource | ResourceBindFlags::UnorderedAccess, MemoryType::DeviceLocal, nullptr, false);
             mVarsChanged = true;
         }
+
+        if (!mpSampleColorDI || mpSampleColorDI->getElementCount() < sampleCount || mVarsChanged)
+        {
+            mpSampleColorDI = mpDevice->createStructuredBuffer(var["sampleColorDI"], sampleCount, ResourceBindFlags::ShaderResource | ResourceBindFlags::UnorderedAccess, MemoryType::DeviceLocal, nullptr, false);
+            mVarsChanged = true;
+        }
+
+        if (!mpSampleColorGI || mpSampleColorGI->getElementCount() < sampleCount || mVarsChanged)
+        {
+            mpSampleColorGI = mpDevice->createStructuredBuffer(var["sampleColorGI"], sampleCount, ResourceBindFlags::ShaderResource | ResourceBindFlags::UnorderedAccess, MemoryType::DeviceLocal, nullptr, false);
+            mVarsChanged = true;
+        }
     }
 
     if (mOutputGuideData && (!mpSampleGuideData || mpSampleGuideData->getElementCount() < sampleCount || mVarsChanged))
@@ -1094,6 +1110,8 @@ void PathTracer::bindShaderData(const ShaderVar& var, const RenderData& renderDa
 
         var["sampleOffset"] = mpSampleOffset; // Can be nullptr
         var["sampleColor"] = mpSampleColor;
+        var["sampleColorDI"] = mpSampleColorDI;
+        var["sampleColorGI"] = mpSampleColorGI;
         var["sampleGuideData"] = mpSampleGuideData;
     }
 
@@ -1119,6 +1137,8 @@ void PathTracer::bindShaderData(const ShaderVar& var, const RenderData& renderDa
     var["viewDir"] = pViewDir; // Can be nullptr
     var["sampleCount"] = pSampleCount; // Can be nullptr
     var["outputColor"] = renderData.getTexture(kOutputColor);
+    var["outputColorDI"] = renderData.getTexture(kOutputDI);
+    var["outputColorGI"] = renderData.getTexture(kOutputGI);
 
     if (useLightSampling && mpEmissiveSampler)
     {
@@ -1131,6 +1151,12 @@ bool PathTracer::beginFrame(RenderContext* pRenderContext, const RenderData& ren
 {
     const auto& pOutputColor = renderData.getTexture(kOutputColor);
     FALCOR_ASSERT(pOutputColor);
+
+    const auto& pOutputDI = renderData.getTexture(kOutputDI);
+    const auto& pOutputGI = renderData.getTexture(kOutputGI);
+
+    FALCOR_ASSERT(pOutputDI && pOutputGI);
+     
 
     // Set output frame dimension.
     setFrameDim(uint2(pOutputColor->getWidth(), pOutputColor->getHeight()));
@@ -1157,6 +1183,9 @@ bool PathTracer::beginFrame(RenderContext* pRenderContext, const RenderData& ren
     if (mpScene == nullptr || !mEnabled)
     {
         pRenderContext->clearUAV(pOutputColor->getUAV().get(), float4(0.f));
+        pRenderContext->clearUAV(pOutputDI->getUAV().get(), float4(0.f));
+        pRenderContext->clearUAV(pOutputGI->getUAV().get(), float4(0.f));
+        
 
         // Set refresh flag if changes that affect the output have occured.
         // This is needed to ensure other passes get notified when the path tracer is enabled/disabled.
@@ -1361,6 +1390,8 @@ void PathTracer::resolvePass(RenderContext* pRenderContext, const RenderData& re
     var["params"].setBlob(mParams);
     var["sampleCount"] = renderData.getTexture(kInputSampleCount); // Can be nullptr
     var["outputColor"] = renderData.getTexture(kOutputColor);
+    var["outputColorDI"] = renderData.getTexture(kOutputDI);
+    var["outputColorGI"] = renderData.getTexture(kOutputGI);
     var["outputAlbedo"] = renderData.getTexture(kOutputAlbedo);
     var["outputSpecularAlbedo"] = renderData.getTexture(kOutputSpecularAlbedo);
     var["outputIndirectAlbedo"] = renderData.getTexture(kOutputIndirectAlbedo);
@@ -1376,6 +1407,8 @@ void PathTracer::resolvePass(RenderContext* pRenderContext, const RenderData& re
     {
         var["sampleOffset"] = mpSampleOffset; // Can be nullptr
         var["sampleColor"] = mpSampleColor;
+        var["sampleColorDI"] = mpSampleColorDI;
+        var["sampleColorGI"] = mpSampleColorGI;
         var["sampleGuideData"] = mpSampleGuideData;
         var["sampleNRDRadiance"] = mpSampleNRDRadiance;
         var["sampleNRDHitDist"] = mpSampleNRDHitDist;

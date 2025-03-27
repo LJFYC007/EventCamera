@@ -73,10 +73,14 @@ struct PathGenerator
     RWTexture2D<uint> sampleOffset;                 ///< Output offset into per-sample buffers. Only valid when kSamplesPerPixel == 0.
 
     RWStructuredBuffer<ColorType> sampleColor;      ///< Output per-sample color if kSamplesPerPixel != 1.
+    RWStructuredBuffer<ColorType> sampleColorDI;      ///< Output per-sample color if kSamplesPerPixel != 1.
+    RWStructuredBuffer<ColorType> sampleColorGI;      ///< Output per-sample color if kSamplesPerPixel != 1.
     RWStructuredBuffer<GuideData> sampleGuideData;  ///< Output per-sample guide data.
     NRDBuffers outputNRD;                           ///< Output NRD data.
 
     RWTexture2D<float4> outputColor;                ///< Output color buffer if kSamplesPerPixel == 1.
+    RWTexture2D<float4> outputColorDI;                ///< Output color buffer if kSamplesPerPixel == 1.
+    RWTexture2D<float4> outputColorGI;                ///< Output color buffer if kSamplesPerPixel == 1.
 
     // Render settings that depend on the scene.
     // TODO: Move into scene defines.

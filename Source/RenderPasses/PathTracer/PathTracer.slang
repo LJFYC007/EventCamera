@@ -80,10 +80,14 @@ struct PathTracer
 
     // Outputs
     RWStructuredBuffer<ColorType> sampleColor;     ///< Output per-sample color if kSamplesPerPixel != 1.
+    RWStructuredBuffer<ColorType> sampleColorDI;     ///< Output per-sample color if kSamplesPerPixel != 1.
+    RWStructuredBuffer<ColorType> sampleColorGI;     ///< Output per-sample color if kSamplesPerPixel != 1.
     RWStructuredBuffer<GuideData> sampleGuideData; ///< Output per-sample guide data.
     NRDBuffers outputNRD;                          ///< Output NRD data.
 
     RWTexture2D<float4> outputColor; ///< Output color buffer if kSamplesPerPixel == 1.
+    RWTexture2D<float4> outputColorDI; ///< Output color buffer if kSamplesPerPixel == 1.
+    RWTexture2D<float4> outputColorGI; ///< Output color buffer if kSamplesPerPixel == 1.
 
     /*******************************************************************
                                 Static members
@@ -1239,15 +1243,15 @@ struct PathTracer
         {
             // Write color directly to frame buffer.
             outputColor[pixel] = float4(path.L, 1.f);
-            // outputColor[pixel] = float4(path.DirectL, 1.f);
-            // outputColor[pixel] = float4(path.L - path.DirectL, 1.f);
+            outputColorDI[pixel] = float4(path.DirectL, 1.f);
+            outputColorGI[pixel] = float4(path.L - path.DirectL, 1.f);
         }
         else
         {
             // Write color to per-sample buffer.
             sampleColor[outIdx].set(path.L);
-            // sampleColor[outIdx].set(path.DirectL);
-            // sampleColor[outIdx].set(path.L -path.DirectL);
+            sampleColorDI[outIdx].set(path.DirectL);
+            sampleColorGI[outIdx].set(path.L - path.DirectL);
         }
 
         if (kOutputGuideData)
