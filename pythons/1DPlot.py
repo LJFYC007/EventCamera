@@ -52,7 +52,12 @@ def parse_arguments():
         nargs="+",
         type=str,
         default=[],
-        help="Fixed x,y positions to sample (format: 'x,y')",
+        help="Fixed x,y pixel positions to sample (format: 'x,y')",
+    )
+    parser.add_argument(
+        "--use_pixel_coords",
+        action="store_true",
+        help="Treat input coordinates as actual pixel positions rather than tile coordinates",
     )
 
     # Processing parameters
@@ -201,6 +206,8 @@ def main():
     if args.fixed_positions:
         for pos_str in args.fixed_positions:
             x, y = map(int, pos_str.split(","))
+            # If using pixel coordinates, we use the values directly
+            # Otherwise, we use them as is (original behavior)
             positions.append((x, y))
 
     # Get slices
@@ -216,7 +223,7 @@ def main():
         slices,
         positions,
         os.path.join(combined_dir, "multiple_slices_raw.png"),
-        "Multiple Random Slices",
+        "Multiple Slices",
     )
     plot_individual_slices(slices, positions, raw_dir)
 
@@ -225,7 +232,7 @@ def main():
         slices,
         positions,
         os.path.join(combined_dir, f"multiple_slices_smoothed_w{args.window_size}.png"),
-        f"Multiple Random Slices (Window Size: {args.window_size})",
+        f"Multiple Slices (Window Size: {args.window_size})",
         window_size=args.window_size,
         smoothed=True,
     )
@@ -234,6 +241,11 @@ def main():
     )
 
     print(f"Results saved to {batch_dir}")
+
+    # Print the positions that were used
+    print("Positions used for slices:")
+    for i, (x, y) in enumerate(positions):
+        print(f"Slice {i+1}: x={x}, y={y}")
 
 
 if __name__ == "__main__":

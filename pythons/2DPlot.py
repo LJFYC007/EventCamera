@@ -65,6 +65,13 @@ def parse_arguments():
         default=[],
         help="Fixed positions along the slice axis",
     )
+    parser.add_argument(
+        "--layers",
+        nargs="+",
+        type=int,
+        default=None,
+        help="Specific layers to plot (overrides num_samples and fixed_positions)",
+    )
 
     # Processing parameters
     parser.add_argument(
@@ -92,7 +99,9 @@ def setup_directories(base_output_dir, batch_id=None):
     return batch_dir, rgb_dir, exr_dir
 
 
-def get_slices(storage, axis, positions=None, num_samples=5, apply_log=False):
+def get_slices(
+    storage, axis, positions=None, num_samples=5, apply_log=False, layers=None
+):
     """Extract 2D slices from specified positions or random positions"""
     slices = []
     positions_list = []
@@ -105,8 +114,19 @@ def get_slices(storage, axis, positions=None, num_samples=5, apply_log=False):
     else:  # z
         max_pos = storage.tile_size[2] * storage.tile_count[2] - 1
 
+    # If layers are specified, use those instead of positions or random samples
+    if layers is not None:
+        positions_list = [layer for layer in layers if 0 <= layer <= max_pos]
+        if len(positions_list) < len(layers):
+            out_of_bounds = [layer for layer in layers if layer < 0 or layer > max_pos]
+            print(
+                f"Warning: Layers {out_of_bounds} are out of bounds (0-{max_pos}) and will be skipped."
+            )
+        if not positions_list:
+            print(f"No valid layers specified. Using random samples instead.")
+            positions_list = [random.randint(0, max_pos) for _ in range(num_samples)]
     # Generate random positions if none provided
-    if not positions:
+    elif not positions:
         for _ in range(num_samples):
             pos = random.randint(0, max_pos)
             positions_list.append(pos)
@@ -223,6 +243,7 @@ def main():
         positions=positions,
         num_samples=args.num_samples,
         apply_log=args.log_transform,
+        layers=args.layers,
     )
 
     # Process and save each slice
