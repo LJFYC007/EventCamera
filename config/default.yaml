@@ -1,19 +1,20 @@
 name: "default"
 build: "Release"
-headless: False
+headless: True
 verbosity: 2
 scene: 0 # 0 is the bistro interior, 1 is the bistro exterior, 2 is the measure_one
 script:
   name: "EventCamera"
-  samplesPerPixel: 4096
+  samplesPerPixel: 64
+  accumulatePass: 64 # this means 64 * 64 = 4096 spp
   russianRoulette: True
   threshold: 1.7
   needAccumulatedEvents: 100
   toleranceEvents: 4
   enableCompress: True
   enableBlockStorage : True
-  directory: "MultiOuputWithLens1024"
+  directory: "4096SPP"
   timeScale: 10000 # meas 0.1ms per frame, in the context of animation
-  exitFrame: 20000 # 0 means never exit
-videoFPS: 20
-outputFile: "BistroInterior_Wine_8spp_4tolerance_1.7threshold"
+  exitFrame: 70 # 0 means never exit
+# videoFPS: 20
+# outputFile: "BistroInterior_Wine_4096spp"

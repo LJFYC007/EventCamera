@@ -55,9 +55,18 @@ public:
      */
     TimePoint update()
     {
-        auto now = mCurrentTime;
-        mElapsedTime = std::chrono::duration<double>(mTimePeriod);
-        mCurrentTime = TimePoint(mCurrentTime.time_since_epoch() + std::chrono::duration_cast<std::chrono::system_clock::duration>(std::chrono::duration<double>(mTimePeriod)));
+        mCallCounter++;
+
+        // Only update time every mMaxAccumulated calls
+        if (mCallCounter >= mMaxAccumulated) {
+            auto now = mCurrentTime;
+            mElapsedTime = std::chrono::duration<double>(mTimePeriod);
+            mCurrentTime = TimePoint(mCurrentTime.time_since_epoch() + std::chrono::duration_cast<std::chrono::system_clock::duration>(std::chrono::duration<double>(mTimePeriod)));
+            mCallCounter = 0;
+        }
+        else
+            mElapsedTime = std::chrono::duration<double>(0.0);
+
         return mCurrentTime;
     }
 
@@ -79,6 +88,8 @@ private:
     TimePoint mCurrentTime;
     std::chrono::duration<double> mElapsedTime{0.0};
     double mTimePeriod = 0.0;
+    uint32_t mCallCounter = 0;       // Counter to track calls to update()
+    uint mMaxAccumulated = 64;
 };
 
 /*

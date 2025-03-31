@@ -19,6 +19,7 @@ def render_graph_PathTracer():
     g.addEdge("VBufferRT.viewW", "PathTracer.viewW")
     g.addEdge("VBufferRT.mvec", "PathTracer.mvec")
 
+    """
     ErrorMeasurePass = createPass("ErrorMeasurePass", {
         'threshold': $THRESHOLD$,
         'needAccumulatedEvents': $NEED_ACCUMULATED_EVENTS$,
@@ -36,27 +37,43 @@ def render_graph_PathTracer():
     })
     g.addPass(CompressPass, "CompressPass")
     g.addEdge("ErrorMeasurePass.Output", "CompressPass.input")
+    """
+
+    AccumulatePass = createPass("AccumulatePass", {})
+    AccumulatePassDI = createPass("AccumulatePass", {})
+    AccumulatePassGI = createPass("AccumulatePass", {})
+    g.addPass(AccumulatePass, "AccumulatePass")
+    g.addPass(AccumulatePassDI, "AccumulatePassDI")
+    g.addPass(AccumulatePassGI, "AccumulatePassGI")
+    g.addEdge("PathTracer.color", "AccumulatePass.input")
+    g.addEdge("PathTracer.DI", "AccumulatePassDI.input")
+    g.addEdge("PathTracer.GI", "AccumulatePassGI.input")
+
+    g.markOutput("AccumulatePass.output")
 
     BlockStoragePass = createPass("BlockStoragePass", {
         'enabled': $BLOCK_STORAGE_ENABLED$,
+        'accumulatePass': $ACCUMULATE_PASS$,
         'directory': "$DIRECTORY$/Output",
     })
     g.addPass(BlockStoragePass, "BlockStoragePass")
-    g.addEdge("PathTracer.color", "BlockStoragePass.input")
+    g.addEdge("AccumulatePass.output", "BlockStoragePass.input")
 
     BlockStoragePassDI = createPass("BlockStoragePass", {
         'enabled': $BLOCK_STORAGE_ENABLED$,
+        'accumulatePass': $ACCUMULATE_PASS$,
         'directory': "$DIRECTORY$/OutputDI",
     })
     g.addPass(BlockStoragePassDI, "BlockStoragePassDI")
-    g.addEdge("PathTracer.DI", "BlockStoragePassDI.input")
+    g.addEdge("AccumulatePassDI.output", "BlockStoragePassDI.input")
 
     BlockStoragePassGI = createPass("BlockStoragePass", {
         'enabled': $BLOCK_STORAGE_ENABLED$,
+        'accumulatePass': $ACCUMULATE_PASS$,
         'directory': "$DIRECTORY$/OutputGI",
     })
     g.addPass(BlockStoragePassGI, "BlockStoragePassGI")
-    g.addEdge("PathTracer.GI", "BlockStoragePassGI.input")
+    g.addEdge("AccumulatePassGI.output", "BlockStoragePassGI.input")
 
 
     # g.markOutput("CompressPass.output")

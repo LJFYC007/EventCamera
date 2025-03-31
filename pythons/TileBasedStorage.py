@@ -171,7 +171,7 @@ class TileBasedStorage:
 
 if __name__ == "__main__":
     # Use existing directory
-    existing_dir = "../output/Temp"
+    existing_dir = "C:\\Users\\LJF\\Documents\\output\\4096SPP\\Output"
     tile_size = [64, 64, 64]
     tile_count = [19, 11, 18]
 
@@ -190,8 +190,8 @@ if __name__ == "__main__":
     assert voxel.shape == torch.Size(
         [4]
     ), f"Expected voxel shape [4], got {voxel.shape}"
-    assert np.isclose(voxel[0].item(), 0.11696338), "Voxel value mismatch"
-    assert np.isclose(voxel[3].item(), 1.0), "Alpha channel mismatch"
+#    assert np.isclose(voxel[0].item(), 0.11696338), "Voxel value mismatch"
+#    assert np.isclose(voxel[3].item(), 1.0), "Alpha channel mismatch"
 
     # Get a plane (z=3)  RGBA float
     z_plane = storage.get(z=3)

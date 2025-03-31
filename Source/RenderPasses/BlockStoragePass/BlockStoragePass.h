@@ -67,4 +67,8 @@ private:
     std::string mDirectoryPath;
     /// Number of current frame
     uint32_t mFrame = 0;
+    /// Number of accumulate fram
+    uint32_t mAccumulateFrame = 0;
+    /// Accumulate Pass Frames
+    uint32_t mAccumulatePass = 1;
 };

@@ -5,7 +5,7 @@ import argparse
 import TemplateInstantiate
 import time
 
-root_dir = "C:\\Users\\pengfei\\workspace\\EventCamera"
+root_dir = "C:\\Users\\LJF\\Documents\\EventCamera"
 
 # 0 is "..\Scenes\Bistro_v5_2\BistroInterior_Wine.pyscene"
 # 1 is "..\Scenes\Bistro_v5_2\BistroExterior.pyscene"
@@ -50,9 +50,16 @@ def run(args):
 
     time_scale = script_config.get('timeScale', 10000.0)
     exit_frame = script_config.get('exitFrame', 0)
+    accumulatePass = script_config.get('accumulatePass', 1)
 
     if not os.path.exists(os.path.join(root_dir, '..\\output', directory)):
         os.makedirs(os.path.join(root_dir, '..\\output', directory))
+    if not os.path.exists(os.path.join(root_dir, '..\\output', directory, 'Output')):
+        os.makedirs(os.path.join(root_dir, '..\\output', directory, 'Output'))
+    if not os.path.exists(os.path.join(root_dir, '..\\output', directory, 'OutputDI')):
+        os.makedirs(os.path.join(root_dir, '..\\output', directory, 'OutputDI'))
+    if not os.path.exists(os.path.join(root_dir, '..\\output', directory, 'OutputGI')):
+        os.makedirs(os.path.join(root_dir, '..\\output', directory, 'OutputGI'))
 
     parameters = {
         "SAMPLES_PER_PIXEL": samples_per_pixel,
@@ -60,18 +67,19 @@ def run(args):
         "THRESHOLD": threshold,
         "NEED_ACCUMULATED_EVENTS": need_accumulated_events,
         "TOLERANCE_EVENTS": tolerance_events,
-        "EXIT_FRAME": exit_frame,
+        "EXIT_FRAME": exit_frame * accumulatePass,
         "ENABLED": enable_compress,
         "BLOCK_STORAGE_ENABLED": enable_block_storage,
         "TIME_SCALE": time_scale,
-        "DIRECTORY": f"C:\\\\Users\\\\pengfei\\\\workspace\\\\EventCamera\\\\..\\\\output\\\\{directory}"
+        "ACCUMULATE_PASS": accumulatePass,
+        "DIRECTORY": f"C:\\\\Users\\\\LJF\\\\Documents\\\\EventCamera\\\\..\\\\output\\\\{directory}"
     }
     TemplateInstantiate.instantiate_template(template_path, script_output, parameters)
 
     verbosity = config.get('verbosity', 2)
     assert(verbosity in [0, 1, 2, 3, 4, 5])
 
-    cmd = [mogwai_path, f"--script={script}", f"--scene={scene}", f"--verbosity={verbosity}"]
+    cmd = [mogwai_path, f"--script={script}", f"--scene={scene}", f"--verbosity={verbosity}", "--deferred"]
     if config.get('headless', False):
         cmd.append("--headless")
 

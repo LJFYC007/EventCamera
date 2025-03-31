@@ -39,6 +39,7 @@ const std::string kInputChannelEventImage = "input";
 const std::string kOutputChannelEventImage = "output";
 const std::string kEnabled = "enabled";
 const std::string kDirectory = "directory";
+const std::string kAccumulatePass = "accumulatePass";
 } // namespace
 
 void BlockStoragePass::prepareResources()
@@ -64,8 +65,10 @@ BlockStoragePass::BlockStoragePass(ref<Device> pDevice, const Properties& props)
     {
         if (key == kEnabled)
             mEnabled = value;
-        if (key == kDirectory)
+        else if (key == kDirectory)
             mDirectoryPath = props.get<std::string>(key);
+        else if (key == kAccumulatePass)
+            mAccumulatePass = value;
         else
             logWarning("Unknown property '{}' in BlockStoragePass properties.", key);
     }
@@ -78,6 +81,7 @@ Properties BlockStoragePass::getProperties() const
     Properties props;
     props[kEnabled] = mEnabled;
     props[kDirectory] = mDirectoryPath;
+    props[kAccumulatePass] = mAccumulatePass;
     return props;
 }
 
@@ -109,6 +113,11 @@ void BlockStoragePass::execute(RenderContext* pRenderContext, const RenderData& 
 
     if (!mEnabled)
         return;
+
+    mAccumulateFrame++;
+    if (mAccumulateFrame < mAccumulatePass)
+        return;
+    mAccumulateFrame = 0;
 
     ref<Texture> inputTexture = renderData.getTexture(kInputChannelEventImage);
     const uint2 resolution = uint2(inputTexture->getWidth(), inputTexture->getHeight());
