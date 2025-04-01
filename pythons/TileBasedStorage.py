@@ -1,11 +1,12 @@
-import torch
-import os
 import numpy as np
 import struct
-
+import torch
+import os
+import math
+from collections import OrderedDict
 
 class TileBasedStorage:
-    def __init__(self, tile_size, tile_count, directory_path):
+    def __init__(self, tile_size, tile_count, directory_path, max_cache_size=500, data_format="rgba"):
         self.tile_size = tile_size  # [x, y, z]
         self.tile_count = tile_count  # [x, y, z]
         self.directory_path = directory_path
@@ -14,31 +15,64 @@ class TileBasedStorage:
             tile_size[1] * tile_count[1],
             tile_size[2] * tile_count[2],
         ]
-        self.cached_tiles = {}  # Cache for loaded tiles
+        self.max_cache_size = max_cache_size
+        self.cached_tiles = OrderedDict()
+        self.data_format = data_format.lower()
+        if self.data_format not in ["rgba", "int8"]:
+            raise ValueError("data_format must be either 'rgba' or 'int8'")
+
+    def _update_cache(self, key):
+        """Update position of a key in cache, moving recently used item to the end"""
+        if key in self.cached_tiles:
+            value = self.cached_tiles.pop(key)
+            self.cached_tiles[key] = value
 
     def _get_block_filename(self, bx, by, bz):
         return os.path.join(self.directory_path, f"block_{bx}_{by}_{bz}.bin")
 
     def _load_block(self, bx, by, bz):
+        key = (bx, by, bz)
         filename = self._get_block_filename(bx, by, bz)
-        if (bx, by, bz) in self.cached_tiles:
-            return self.cached_tiles[(bx, by, bz)]
+
+        # If in cache, update position and return
+        if key in self.cached_tiles:
+            self._update_cache(key)
+            return self.cached_tiles[key]
 
         if os.path.exists(filename):
             with open(filename, "rb") as f:
-                data = np.fromfile(f, dtype=np.float32)
-                # Reshape to RGBA format
-                data = data.reshape(
-                    self.tile_size[2], self.tile_size[1], self.tile_size[0], 4
-                )
+                if self.data_format == "rgba":
+                    data = np.fromfile(f, dtype=np.float32)
+                    # Reshape to RGBA format
+                    data = data.reshape(
+                        self.tile_size[2], self.tile_size[1], self.tile_size[0], 4
+                    )
+                elif self.data_format == "int8":
+                    data = np.fromfile(f, dtype=np.int8)
+                    # Reshape to single channel format
+                    data = data.reshape(
+                        self.tile_size[2], self.tile_size[1], self.tile_size[0], 1
+                    )
+
                 tensor = torch.from_numpy(data)
-                self.cached_tiles[(bx, by, bz)] = tensor
+
+                # Check cache size, remove least recently used if full
+                if len(self.cached_tiles) >= self.max_cache_size:
+                    self.cached_tiles.popitem(last=False)  # Remove the first (oldest) item
+
+                self.cached_tiles[key] = tensor
                 return tensor
         else:
             # Return zeros if block doesn't exist
-            return torch.zeros(
-                (self.tile_size[2], self.tile_size[1], self.tile_size[0], 4)
-            )
+            if self.data_format == "rgba":
+                return torch.zeros(
+                    (self.tile_size[2], self.tile_size[1], self.tile_size[0], 4)
+                )
+            else:  # int8
+                return torch.zeros(
+                    (self.tile_size[2], self.tile_size[1], self.tile_size[0], 1),
+                    dtype=torch.int8
+                )
 
     def get_voxel(self, x, y, z):
         """Get a single voxel at coordinates (x, y, z)"""
@@ -100,7 +134,7 @@ class TileBasedStorage:
 
         elif x is not None:
             # Get YZ plane
-            result = torch.zeros((self.frame_dim[2], self.frame_dim[1], 4))
+            result = torch.zeros((self.frame_dim[2], self.frame_dim[1], self.data_format == "rgba" and 4 or 1))
             bx = x // self.tile_size[0]
             lx = x % self.tile_size[0]
 
@@ -122,7 +156,7 @@ class TileBasedStorage:
 
         elif y is not None:
             # Get XZ plane
-            result = torch.zeros((self.frame_dim[2], self.frame_dim[0], 4))
+            result = torch.zeros((self.frame_dim[2], self.frame_dim[0], self.data_format == "rgba" and 4 or 1))
             by = y // self.tile_size[1]
             ly = y % self.tile_size[1]
 
@@ -144,7 +178,7 @@ class TileBasedStorage:
 
         elif z is not None:
             # Get XY plane (frame)
-            result = torch.zeros((self.frame_dim[1], self.frame_dim[0], 4))
+            result = torch.zeros((self.frame_dim[1], self.frame_dim[0], self.data_format == "rgba" and 4 or 1))
             bz = z // self.tile_size[2]
             lz = z % self.tile_size[2]
 
@@ -162,73 +196,42 @@ class TileBasedStorage:
                         : y_end - y_start, : x_end - x_start
                     ]
 
-            return result
+            return result[:720, :1280, :]
 
         else:
             # If all are None, we would need to load the entire volume
             raise ValueError("At least one dimension must be specified")
 
+    def clear_cache(self):
+        """Clear the entire cache"""
+        self.cached_tiles.clear()
 
-if __name__ == "__main__":
-    # Use existing directory
-    existing_dir = "C:\\Users\\LJF\\Documents\\output\\4096SPP\\Output"
-    tile_size = [64, 64, 64]
-    tile_count = [19, 11, 18]
+    def get_cache_info(self):
+        """Return cache information"""
+        return {
+            "current_size": len(self.cached_tiles),
+            "max_size": self.max_cache_size
+        }
 
-    # Create storage
-    print("Initializing TileBasedStorage...")
-    storage = TileBasedStorage(tile_size, tile_count, existing_dir)
 
-    # Test different access methods
-    print("\nTesting different access methods:")
+def lin_log(rgb, threshold=0.1):
+    # converting rgb into np.float64.
+    if rgb.dtype is not torch.float64:  # note float64 to get rounding to work
+        rgb = rgb.double()
 
-    # Single voxel access
-    x, y, z = 5, 6, 7
-    voxel = storage.get(x, y, z)
-    print(f"Voxel at ({x}, {y}, {z}): {voxel.numpy()}")
-    # Assert voxel dimensions and values
-    assert voxel.shape == torch.Size(
-        [4]
-    ), f"Expected voxel shape [4], got {voxel.shape}"
-#    assert np.isclose(voxel[0].item(), 0.11696338), "Voxel value mismatch"
-#    assert np.isclose(voxel[3].item(), 1.0), "Alpha channel mismatch"
+    assert(rgb.shape == (720, 1280, 4))
+    x = rgb[:, :, 0] * 0.2126 + rgb[:, :, 1] * 0.7152 + rgb[:, :, 2] * 0.0722  # RGB to illumination
 
-    # Get a plane (z=3)  RGBA float
-    z_plane = storage.get(z=3)
-    print(f"XY plane at z=3 shape: {z_plane.shape}")
-    # Assert plane dimensions
-    expected_shape = torch.Size([704, 1216, 4])  # 11*64=704, 19*64=1216
-    assert (
-        z_plane.shape == expected_shape
-    ), f"Expected plane shape {expected_shape}, got {z_plane.shape}"
+    f = (1./threshold) * math.log(threshold)
 
-    # write to an image
-    import cv2
+    y = torch.where(x <= threshold, x*f, torch.log(x))
 
-    z_plane = z_plane.numpy()
-    z_plane = (z_plane * 255).astype(np.uint8)
-    # OpenCV uses BGRA format, so convert from RGBA to BGRA
-    z_plane = cv2.cvtColor(z_plane, cv2.COLOR_RGBA2BGRA)
-    cv2.imwrite("z_plane.png", z_plane)
+    # important, we do a floating point round to some digits of precision
+    # to avoid that adding threshold and subtracting it again results
+    # in different number because first addition shoots some bits off
+    # to never-never land, thus preventing the OFF events
+    # that ideally follow ON events when object moves by
+    rounding = 1e8
+    y = torch.round(y*rounding)/rounding
 
-    # Get a column
-    x, y = 10, 10
-    column = storage.get(x=x, y=y)
-    print(f"Z column at x={x}, y={y} shape: {column.shape}")
-    # Assert column dimensions
-    expected_column_shape = torch.Size([1152, 4])  # 18*64=1152
-    assert (
-        column.shape == expected_column_shape
-    ), f"Expected column shape {expected_column_shape}, got {column.shape}"
-
-    # Get a row
-    x, z = 10, 5
-    row = storage.get(x=x, z=z)
-    print(f"Y row at x={x}, z={z} shape: {row.shape}")
-    # Assert row dimensions
-    expected_row_shape = torch.Size([704, 4])  # 11*64=704
-    assert (
-        row.shape == expected_row_shape
-    ), f"Expected row shape {expected_row_shape}, got {row.shape}"
-
-    print("\nTest completed!")
+    return y.float()
