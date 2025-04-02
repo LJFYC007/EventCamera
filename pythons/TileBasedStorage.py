@@ -214,13 +214,13 @@ class TileBasedStorage:
         }
 
 
-def lin_log(rgb, threshold=0.1):
+def lin_log(rgb, threshold=20):
     # converting rgb into np.float64.
     if rgb.dtype is not torch.float64:  # note float64 to get rounding to work
         rgb = rgb.double()
 
     assert(rgb.shape == (720, 1280, 4))
-    x = rgb[:, :, 0] * 0.2126 + rgb[:, :, 1] * 0.7152 + rgb[:, :, 2] * 0.0722  # RGB to illumination
+    x = (rgb[:, :, 0] * 0.2126 + rgb[:, :, 1] * 0.7152 + rgb[:, :, 2] * 0.0722) * 255  # RGB to illumination
 
     f = (1./threshold) * math.log(threshold)
 
@@ -231,7 +231,5 @@ def lin_log(rgb, threshold=0.1):
     # in different number because first addition shoots some bits off
     # to never-never land, thus preventing the OFF events
     # that ideally follow ON events when object moves by
-    rounding = 1e8
-    y = torch.round(y*rounding)/rounding
 
     return y.float()
