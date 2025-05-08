@@ -44,10 +44,10 @@ def render_graph_PathTracer():
     AccumulatePassGI = createPass("AccumulatePass", {})
     g.addPass(AccumulatePass, "AccumulatePass")
     g.addPass(AccumulatePassDI, "AccumulatePassDI")
-    g.addPass(AccumulatePassGI, "AccumulatePassGI")
+    # g.addPass(AccumulatePassGI, "AccumulatePassGI")
     g.addEdge("PathTracer.color", "AccumulatePass.input")
     g.addEdge("PathTracer.DI", "AccumulatePassDI.input")
-    g.addEdge("PathTracer.GI", "AccumulatePassGI.input")
+    # g.addEdge("PathTracer.GI", "AccumulatePassGI.input")
 
     g.markOutput("AccumulatePass.output")
 
@@ -67,6 +67,7 @@ def render_graph_PathTracer():
     g.addPass(BlockStoragePassDI, "BlockStoragePassDI")
     g.addEdge("AccumulatePassDI.output", "BlockStoragePassDI.input")
 
+    """
     BlockStoragePassGI = createPass("BlockStoragePass", {
         'enabled': $BLOCK_STORAGE_ENABLED$,
         'accumulatePass': $ACCUMULATE_PASS$,
@@ -74,12 +75,13 @@ def render_graph_PathTracer():
     })
     g.addPass(BlockStoragePassGI, "BlockStoragePassGI")
     g.addEdge("AccumulatePassGI.output", "BlockStoragePassGI.input")
+    """
 
 
     # g.markOutput("CompressPass.output")
     g.markOutput("BlockStoragePass.output")
     g.markOutput("BlockStoragePassDI.output")
-    g.markOutput("BlockStoragePassGI.output")
+    # g.markOutput("BlockStoragePassGI.output")
 
     return g
 

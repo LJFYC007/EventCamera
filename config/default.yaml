@@ -6,15 +6,15 @@ scene: 0 # 0 is the bistro interior, 1 is the bistro exterior, 2 is the measure_
 script:
   name: "EventCamera"
   samplesPerPixel: 64
-  accumulatePass: 64 # this means 64 * 64 = 4096 spp
+  accumulatePass: 32 # this means 64 * 64 = 4096 spp
   russianRoulette: False
   threshold: 1.7
   needAccumulatedEvents: 100
   toleranceEvents: 4
   enableCompress: True
   enableBlockStorage : True
-  directory: "4096SPP"
-  timeScale: 10000 # meas 0.1ms per frame, in the context of animation
-  exitFrame: 3000 # 0 means never exit
+  directory: "2048SPP_2000FPS"
+  timeScale: 2000 # meas 0.1ms per frame, in the context of animation
+  exitFrame: 30000 # 0 means never exit
 # videoFPS: 20
 # outputFile: "BistroInterior_Wine_4096spp"
