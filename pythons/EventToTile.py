@@ -73,7 +73,7 @@ if __name__ == "__main__":
 
         for line in tqdm(f, desc="Processing events", unit="event"):
             timestamp, x, y, polarity = line.strip().split()
-            timestamp = int(float(timestamp) * 10000)
+            timestamp = int(float(timestamp) * 1000)
             x, y, polarity = int(x), int(y), int(polarity)
             if timestamp < time_length:  # 确保timestamp在有效范围内
                 events_data[timestamp, y, x] = 1 if polarity == 1 else -1
