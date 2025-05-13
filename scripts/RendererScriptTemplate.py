@@ -51,6 +51,11 @@ def render_graph_PathTracer():
 
     g.markOutput("AccumulatePass.output")
 
+    SceneDebuggerID = createPass('SceneDebugger', {'mode': 'InstanceID'})
+    g.addPass(SceneDebuggerID, 'SceneDebuggerID')
+    SceneDebuggerNormal = createPass('SceneDebugger', {'mode': 'FaceNormal'})
+    g.addPass(SceneDebuggerNormal, 'SceneDebuggerNormal')
+
     BlockStoragePass = createPass("BlockStoragePass", {
         'enabled': $BLOCK_STORAGE_ENABLED$,
         'accumulatePass': $ACCUMULATE_PASS$,
@@ -67,6 +72,22 @@ def render_graph_PathTracer():
     g.addPass(BlockStoragePassDI, "BlockStoragePassDI")
     g.addEdge("AccumulatePassDI.output", "BlockStoragePassDI.input")
 
+    BlockStoragePassID = createPass("BlockStoragePass", {
+        'enabled': $BLOCK_STORAGE_ENABLED$,
+        'accumulatePass': $ACCUMULATE_PASS$,
+        'directory': "$DIRECTORY$/OutputID",
+    })
+    g.addPass(BlockStoragePassID, "BlockStoragePassID")
+    g.addEdge("SceneDebuggerID.output", "BlockStoragePassID.input")
+
+    BlockStoragePassNormal = createPass("BlockStoragePass", {
+        'enabled': $BLOCK_STORAGE_ENABLED$,
+        'accumulatePass': $ACCUMULATE_PASS$,
+        'directory': "$DIRECTORY$/OutputNormal",
+    })
+    g.addPass(BlockStoragePassNormal, "BlockStoragePassNormal")
+    g.addEdge("SceneDebuggerNormal.output", "BlockStoragePassNormal.input")
+
     """
     BlockStoragePassGI = createPass("BlockStoragePass", {
         'enabled': $BLOCK_STORAGE_ENABLED$,
@@ -82,6 +103,8 @@ def render_graph_PathTracer():
     g.markOutput("BlockStoragePass.output")
     g.markOutput("BlockStoragePassDI.output")
     # g.markOutput("BlockStoragePassGI.output")
+    g.markOutput("BlockStoragePassID.output")
+    g.markOutput("BlockStoragePassNormal.output")
 
     return g
 

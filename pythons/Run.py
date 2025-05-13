@@ -60,6 +60,10 @@ def run(args):
         os.makedirs(os.path.join(root_dir, '..\\output', directory, 'OutputDI'))
     if not os.path.exists(os.path.join(root_dir, '..\\output', directory, 'OutputGI')):
         os.makedirs(os.path.join(root_dir, '..\\output', directory, 'OutputGI'))
+    if not os.path.exists(os.path.join(root_dir, '..\\output', directory, 'OutputID')):
+        os.makedirs(os.path.join(root_dir, '..\\output', directory, 'OutputID'))
+    if not os.path.exists(os.path.join(root_dir, '..\\output', directory, 'OutputNormal')):
+        os.makedirs(os.path.join(root_dir, '..\\output', directory, 'OutputNormal'))
 
     parameters = {
         "SAMPLES_PER_PIXEL": samples_per_pixel,
