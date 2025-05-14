@@ -1,11 +1,11 @@
 from falcor import *
 
-model_path = "C:\\Users\\pengfei\\workspace\\EventCamera\\config\\pulse_classifier.onnx"
+model_path = "F:\\EventCamera\\config\\pulse_classifier.onnx"
 
 def render_graph_PathTracer():
     g = RenderGraph("PathTracer")
     PathTracer = createPass("PathTracer", {
-        'samplesPerPixel': 16,
+        'samplesPerPixel': 1,
         'useNRDDemodulation': False,
         'maxTransmissionBounces': 0,
     })
@@ -20,8 +20,10 @@ def render_graph_PathTracer():
     g.addEdge("VBufferRT.mvec", "PathTracer.mvec")
     g.addEdge("PathTracer.color", "AccumulatePass.input")
     g.markOutput("AccumulatePass.output")
+    g.markOutput("PathTracer.DI")
+    g.markOutput("PathTracer.GI")
 
-    Network = createPass("Network", {'accumulatePass': 65, 'model_path': model_path})
+    Network = createPass("Network", {'accumulatePass': 64, 'model_path': model_path})
     g.addPass(Network, "Network")
 
     g.addEdge("AccumulatePass.output", "Network.input")

@@ -52,7 +52,8 @@ void Network::prepareResources()
 
     auto vbBindFlags = ResourceBindFlags::ShaderResource | ResourceBindFlags::UnorderedAccess | ResourceBindFlags::Shared;
     size_t type_size = sizeof(float);
-    mpStorageTexture = mpDevice->createBuffer(type_size * mFrameDim.x * mFrameDim.y * networkInputLength, vbBindFlags);
+    mpNetworkInputBuffer = mpDevice->createBuffer(type_size * mFrameDim.x * mFrameDim.y * networkInputLength, vbBindFlags);
+    mpNetworkOutputBuffer = mpDevice->createBuffer(type_size * mFrameDim.x * mFrameDim.y * networkInputLength * 2, vbBindFlags);
 }
 
 inline void checkCudaErrorCode(cudaError_t code)
@@ -93,15 +94,12 @@ Network::Network(ref<Device> pDevice, const Properties& props) : RenderPass(pDev
     FALCOR_CHECK(onnxModelPath != "", "no model specified!");
     // TensorRT
     auto builder = std::unique_ptr<nvinfer1::IBuilder>(nvinfer1::createInferBuilder(mylogger));
-    if (builder.get() == nullptr) {
+    if (builder.get() == nullptr)
         logFatal("builder is null");
-    }
     auto explicitBatch = 1U << static_cast<uint32_t>(nvinfer1::NetworkDefinitionCreationFlag::kEXPLICIT_BATCH);
     auto network = std::unique_ptr<nvinfer1::INetworkDefinition>(builder->createNetworkV2(explicitBatch));
     if (network.get() == nullptr)
-    {
         logFatal("network is null");
-    }
     auto parser = std::unique_ptr<nvonnxparser::IParser>(nvonnxparser::createParser(*network, mylogger));
     assert(parser.get() != nullptr);
 
@@ -120,9 +118,7 @@ Network::Network(ref<Device> pDevice, const Properties& props) : RenderPass(pDev
     // Parse the buffer we read into memory.
     auto parsed = parser->parse(buffer.data(), buffer.size());
     for (int32_t i = 0; i < parser->getNbErrors(); ++i)
-    {
         logError("parser error:", parser->getError(i)->desc());
-    }
     if (!parsed)
     {
         auto msg = "Error, unable to parse model file";
@@ -132,9 +128,7 @@ Network::Network(ref<Device> pDevice, const Properties& props) : RenderPass(pDev
 
     auto config = std::unique_ptr<nvinfer1::IBuilderConfig>(builder->createBuilderConfig());
     if (config == nullptr)
-    {
         logFatal("config is null");
-    }
 
     FALCOR_CHECK(network->getNbInputs() == 1, "input number should be 1");
 
@@ -167,16 +161,13 @@ Network::Network(ref<Device> pDevice, const Properties& props) : RenderPass(pDev
     // kVERBOSE and try rebuilding the engine. Doing so will provide you with more
     // information on why exactly it is failing.
     std::unique_ptr<nvinfer1::IHostMemory> plan{builder->buildSerializedNetwork(*network, *config)};
-    if (plan.get() == nullptr) {
+    if (plan.get() == nullptr)
         logFatal("plan is null");
-    }
 
     std::filesystem::path path(onnxModelPath);
     std::vector<std::filesystem::path> parts;
     for (const auto& part : path)
-    {
         parts.push_back(part);
-    }
     std::string model_description = parts[parts.size() - 2].string() + parts[parts.size() - 1].string() + ".plan";
 
     // Write the engine to disk
@@ -187,9 +178,8 @@ Network::Network(ref<Device> pDevice, const Properties& props) : RenderPass(pDev
 
     // TensorRT Runtime
     mpRuntime = std::unique_ptr<nvinfer1::IRuntime>(nvinfer1::createInferRuntime(mylogger));
-    if (mpRuntime.get() == nullptr) {
+    if (mpRuntime.get() == nullptr)
         logFatal("runtime is null");
-    }
     auto ret = cudaSetDevice(0);
     if (ret != 0)
     {
@@ -201,14 +191,12 @@ Network::Network(ref<Device> pDevice, const Properties& props) : RenderPass(pDev
         throw std::runtime_error(errMsg);
     }
     mpEngine = std::unique_ptr<nvinfer1::ICudaEngine>(mpRuntime->deserializeCudaEngine(plan->data(), plan->size()));
-    if (mpEngine.get() == nullptr) {
+    if (mpEngine.get() == nullptr)
         logFatal("engine is null");
-    }
 
     mpContext = std::unique_ptr<nvinfer1::IExecutionContext>(mpEngine->createExecutionContext());
-    if (mpContext.get() == nullptr) {
+    if (mpContext.get() == nullptr)
         logFatal("context is null");
-    }
 
     FALCOR_CHECK(1 == network->getNbOutputs(), "output tensor number mismatch!");
     auto name = mpEngine->getIOTensorName(mpEngine->getNbIOTensors() - 1);
@@ -228,7 +216,7 @@ RenderPassReflection Network::reflect(const CompileData& compileData)
     RenderPassReflection reflector;
     reflector.addInput(kInputChannelEventImage, "Input accumulate image").bindFlags(ResourceBindFlags::ShaderResource);
     reflector.addOutput(kOutputChannelEventImage, "Output event image")
-        .bindFlags(ResourceBindFlags::UnorderedAccess)
+        .bindFlags(ResourceBindFlags::UnorderedAccess | ResourceBindFlags::ShaderResource)
         .format(ResourceFormat::RGBA32Float);
     return reflector;
 }
@@ -239,6 +227,13 @@ void Network::execute(RenderContext* pRenderContext, const RenderData& renderDat
         return;
     auto start_time = std::chrono::high_resolution_clock::now();
 
+    mAccumulateFrame++;
+    if (mAccumulateFrame < mAccumulatePass)
+        return;
+    mAccumulateFrame = 0;
+    mFrame++;
+
+    // ----------------- Do the input pass -----------------
     if (!mpNetworkInputPass)
     {
         DefineList defines;
@@ -251,11 +246,6 @@ void Network::execute(RenderContext* pRenderContext, const RenderData& renderDat
         mpNetworkInputPass = ComputePass::create(mpDevice, desc, defines);
     }
 
-    mAccumulateFrame++;
-    if (mAccumulateFrame < mAccumulatePass)
-        return;
-    mAccumulateFrame = 0;
-
     ref<Texture> inputTexture = renderData.getTexture(kInputChannelEventImage);
     const uint2 resolution = uint2(inputTexture->getWidth(), inputTexture->getHeight());
     if (any(resolution != mFrameDim))
@@ -266,55 +256,59 @@ void Network::execute(RenderContext* pRenderContext, const RenderData& renderDat
 
     auto vars = mpNetworkInputPass->getRootVar();
     vars["input"] = inputTexture;
-    vars["output"] = mpStorageTexture;
+    vars["output"] = mpNetworkInputBuffer;
     vars["PerFrameCB"]["gResolution"] = mFrameDim;
     vars["PerFrameCB"]["gNetworkInputLength"] = networkInputLength;
-
     mpNetworkInputPass->execute(pRenderContext, uint3(mFrameDim, 1));
-    mFrame++;
 
-    /*
-    auto pointer = mpStorageTexture->getCudaMemory()->getMappedData();
-    // auto buffer = renderData.getResource(input.tex_name)->getNativeHandle().as<ID3D12Resource*>()->GetGPUVirtualAddress();
-    bool res = mpContext->setTensorAddress(mpInputNames[0].c_str(), pointer);
-    if (!res)
-    {
-        logFatal("Set input tensor {} address failed!", mpInputNames[0]);
-    }
-    auto output_pointer = renderData.getResource(std::string("output"))->asBuffer()->getCudaMemory()->getMappedData();
-    res = mpContext->setTensorAddress(mpOutputNames[0].c_str(), output_pointer);
-    if (!res)
-        logFatal("Set output tensor address failed!");
-    mpContext->enqueueV3(mpStream);
-    cudaStreamSynchronize(mpStream);
-    */
 
+    // ----------------- Do the inference -----------------
     int numPatches = mFrameDim.x * mFrameDim.y / 1024 + 1;
     int batchSize = 1024;
-    float* base_input_ptr = static_cast<float*>(mpStorageTexture->getCudaMemory()->getMappedData());
-    float* base_output_ptr = static_cast<float*>(renderData.getResource("output")->asBuffer()->getCudaMemory()->getMappedData());
+    float* base_input_ptr = static_cast<float*>(mpNetworkInputBuffer->getCudaMemory()->getMappedData());
+    float* base_output_ptr = static_cast<float*>(mpNetworkOutputBuffer->getCudaMemory()->getMappedData());
 
     auto inference_start_time = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < numPatches; i += batchSize)
     {
-        int curBatchSize = std::min(batchSize, numPatches - i);
-
         void* inputAddr = base_input_ptr + i * networkInputLength * batchSize;
         bool res = mpContext->setTensorAddress(mpInputNames[0].c_str(), inputAddr);
         if (!res)
             logFatal("Set input tensor {} address failed!", mpInputNames[0]);
 
-        void* outputAddr = base_output_ptr ;
+        void* outputAddr = base_output_ptr + i * networkInputLength * batchSize * 2;
         res = mpContext->setTensorAddress(mpOutputNames[0].c_str(), outputAddr);
         if (!res)
             logFatal("Set output tensor address failed!");
 
         mpContext->enqueueV3(mpStream);
-        cudaStreamSynchronize(mpStream);
+        checkCudaErrorCode(cudaStreamSynchronize(mpStream));
     }
-    auto end_time = std::chrono::high_resolution_clock::now();
+    auto inference_end_time = std::chrono::high_resolution_clock::now();
 
-    const auto inference_time_milli = 1000.0 * std::chrono::duration_cast<std::chrono::duration<double> >(end_time - inference_start_time).count();
+    // ----------------- Do the output pass -----------------
+    if (!mpNetworkOutputPass)
+    {
+        DefineList defines;
+        mpScene->getShaderDefines(defines);
+        ProgramDesc desc;
+        mpScene->getShaderModules(desc.shaderModules);
+        desc.addShaderLibrary("RenderPasses/Network/NetworkOutput.cs.slang");
+        desc.csEntry("main");
+        mpScene->getTypeConformances(desc.typeConformances);
+        mpNetworkOutputPass = ComputePass::create(mpDevice, desc, defines);
+    }
+
+    ref<Texture> outputTexture = renderData.getTexture(kOutputChannelEventImage);
+    vars = mpNetworkOutputPass->getRootVar();
+    vars["input"] = mpNetworkOutputBuffer;
+    vars["output"] = outputTexture;
+    vars["PerFrameCB"]["gResolution"] = mFrameDim;
+    vars["PerFrameCB"]["gNetworkInputLength"] = networkInputLength;
+    mpNetworkOutputPass->execute(pRenderContext, uint3(mFrameDim, 1));
+
+    auto end_time = std::chrono::high_resolution_clock::now();
+    const auto inference_time_milli = 1000.0 * std::chrono::duration_cast<std::chrono::duration<double> >(inference_end_time - inference_start_time).count();
     const auto time_milli = 1000.0 * std::chrono::duration_cast<std::chrono::duration<double> >(end_time - start_time).count();
     Falcor::logInfo("Inference: {:.6f} ms, MyNetworkPass: {:.6f} ms", inference_time_milli, time_milli);
 }

@@ -60,9 +60,13 @@ private:
     void prepareResources();
 
     const uint32_t networkInputLength = 51;
-    ref<Buffer> mpStorageTexture;
-    /// Compute pass that performs the network input algorithm
+    ref<Buffer> mpNetworkInputBuffer;
+    ref<Buffer> mpNetworkOutputBuffer;
+
+    /// Compute pass that performs the network
     ref<ComputePass> mpNetworkInputPass;
+    ref<ComputePass> mpNetworkOutputPass;
+
     /// The current scene (or nullptr if no scene)
     ref<Scene> mpScene;
 
