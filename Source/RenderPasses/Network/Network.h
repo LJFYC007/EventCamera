@@ -63,6 +63,8 @@ private:
     ref<Buffer> mpNetworkInputBuffer;
     ref<Buffer> mpNetworkOutputBuffer;
 
+    ref<Texture> mpLastTexture;
+
     /// Compute pass that performs the network
     ref<ComputePass> mpNetworkInputPass;
     ref<ComputePass> mpNetworkOutputPass;

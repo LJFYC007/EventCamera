@@ -54,6 +54,8 @@ void Network::prepareResources()
     size_t type_size = sizeof(float);
     mpNetworkInputBuffer = mpDevice->createBuffer(type_size * mFrameDim.x * mFrameDim.y * networkInputLength, vbBindFlags);
     mpNetworkOutputBuffer = mpDevice->createBuffer(type_size * mFrameDim.x * mFrameDim.y * networkInputLength * 2, vbBindFlags);
+    mpLastTexture = mpDevice->createTexture2D(
+        mFrameDim.x, mFrameDim.y, ResourceFormat::R32Float, 1, 1, nullptr, ResourceBindFlags::ShaderResource | ResourceBindFlags::UnorderedAccess);
 }
 
 inline void checkCudaErrorCode(cudaError_t code)
@@ -257,19 +259,21 @@ void Network::execute(RenderContext* pRenderContext, const RenderData& renderDat
     auto vars = mpNetworkInputPass->getRootVar();
     vars["input"] = inputTexture;
     vars["output"] = mpNetworkInputBuffer;
+    vars["lastTexture"] = mpLastTexture;
     vars["PerFrameCB"]["gResolution"] = mFrameDim;
     vars["PerFrameCB"]["gNetworkInputLength"] = networkInputLength;
     mpNetworkInputPass->execute(pRenderContext, uint3(mFrameDim, 1));
 
 
     // ----------------- Do the inference -----------------
-    int numPatches = mFrameDim.x * mFrameDim.y / 1024 + 1;
+    int numPatches = 900; // mFrameDim.x * mFrameDim.y / 1024;
     int batchSize = 1024;
     float* base_input_ptr = static_cast<float*>(mpNetworkInputBuffer->getCudaMemory()->getMappedData());
     float* base_output_ptr = static_cast<float*>(mpNetworkOutputBuffer->getCudaMemory()->getMappedData());
+    size_t type_size = sizeof(float);
 
     auto inference_start_time = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < numPatches; i += batchSize)
+    for (int i = 0; i < numPatches; i++)
     {
         void* inputAddr = base_input_ptr + i * networkInputLength * batchSize;
         bool res = mpContext->setTensorAddress(mpInputNames[0].c_str(), inputAddr);
@@ -282,8 +286,8 @@ void Network::execute(RenderContext* pRenderContext, const RenderData& renderDat
             logFatal("Set output tensor address failed!");
 
         mpContext->enqueueV3(mpStream);
-        checkCudaErrorCode(cudaStreamSynchronize(mpStream));
     }
+    checkCudaErrorCode(cudaStreamSynchronize(mpStream));
     auto inference_end_time = std::chrono::high_resolution_clock::now();
 
     // ----------------- Do the output pass -----------------

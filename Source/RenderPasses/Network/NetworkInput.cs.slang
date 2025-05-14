@@ -1,4 +1,5 @@
 Texture2D<float4> input;
+RWTexture2D<float> lastTexture;
 RWStructuredBuffer<float> output;
 
 cbuffer PerFrameCB
@@ -24,6 +25,7 @@ void main(uint3 dispatchThreadID: SV_DispatchThreadID)
         float y = x <= threshold ? x * f : log(x);
         float rounding = 1e8f;
         y = round(y * rounding) / rounding;
-        output[index + gNetworkInputLength - 1] = y;
+        output[index + gNetworkInputLength - 1] = y - lastTexture[tex_coord2];
+        lastTexture[tex_coord2] = y;
     }
 }
