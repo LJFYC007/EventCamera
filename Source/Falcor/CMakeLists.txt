@@ -999,6 +999,20 @@ target_link_libraries(Falcor
         $<$<PLATFORM_ID:Linux>:gtk3>
 )
 
+# tensorrt
+target_include_directories(Falcor PUBLIC ${TensorRT_INCLUDE_DIRS})
+target_link_libraries(Falcor PUBLIC ${TensorRT_LIBRARIES})
+
+foreach (source_file ${TensorRT_DLLS})
+    message("Copy ${source_file}")
+    add_custom_command(TARGET Falcor POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy
+            ${source_file}
+            $<TARGET_FILE_DIR:Falcor>
+    )
+endforeach()
+
+
 target_include_directories(Falcor
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}
