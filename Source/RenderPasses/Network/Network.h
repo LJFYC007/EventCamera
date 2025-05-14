@@ -28,6 +28,9 @@
 #pragma once
 #include "Falcor.h"
 #include "RenderGraph/RenderPass.h"
+#include "NVinfer.h"
+#include "NvOnnxParser.h"
+#include <vector>
 
 using namespace Falcor;
 
@@ -42,15 +45,39 @@ public:
     }
 
     Network(ref<Device> pDevice, const Properties& props);
+    ~Network();
 
     virtual Properties getProperties() const override;
     virtual RenderPassReflection reflect(const CompileData& compileData) override;
     virtual void compile(RenderContext* pRenderContext, const CompileData& compileData) override {}
     virtual void execute(RenderContext* pRenderContext, const RenderData& renderData) override;
     virtual void renderUI(Gui::Widgets& widget) override;
-    virtual void setScene(RenderContext* pRenderContext, const ref<Scene>& pScene) override {}
+    virtual void setScene(RenderContext* pRenderContext, const ref<Scene>& pScene) override { mpScene = pScene; }
     virtual bool onMouseEvent(const MouseEvent& mouseEvent) override { return false; }
     virtual bool onKeyEvent(const KeyboardEvent& keyEvent) override { return false; }
 
 private:
+    void prepareResources();
+
+    const uint32_t networkInputLength = 51;
+    ref<Buffer> mpStorageTexture;
+    /// Compute pass that performs the network input algorithm
+    ref<ComputePass> mpNetworkInputPass;
+    /// The current scene (or nullptr if no scene)
+    ref<Scene> mpScene;
+
+    /// Current frame dimension in pixels.
+    uint2 mFrameDim = {0, 0};
+    /// Number of current frame (didn't consider the accumulate pass)
+    uint32_t mFrame = 0;
+    /// Number of accumulate frame
+    uint32_t mAccumulateFrame = 0;
+    /// Accumulate Pass Frames
+    uint32_t mAccumulatePass = 1;
+
+    std::vector<std::string> mpOutputNames, mpInputNames;
+    std::unique_ptr<nvinfer1::IRuntime> mpRuntime;
+    std::unique_ptr<nvinfer1::ICudaEngine> mpEngine;
+    std::unique_ptr<nvinfer1::IExecutionContext> mpContext;
+    cudaStream_t mpStream;
 };

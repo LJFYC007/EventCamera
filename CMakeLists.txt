@@ -220,7 +220,7 @@ message(STATUS "FALCOR_HAS_NV_USD: ${FALCOR_HAS_NV_USD}")
 message(STATUS "FALCOR_HAS_MDL_SDK: ${FALCOR_HAS_MDL_SDK}")
 message(STATUS "FALCOR_ENABLE_USD: ${FALCOR_ENABLE_USD}")
 
-set(TensorRT_DIR D:\\TensorRT-10.10.0.31)
+set(TensorRT_DIR D:\\TensorRT-10.7.0.23)
 message(STATUS "TensorRT_DIR : ${TensorRT_DIR}")
 find_package(TensorRT REQUIRED)
 
