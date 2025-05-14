@@ -35,7 +35,10 @@ def convert_tiles(input_dir, output_dir, tile_size, tile_count, data_format,
             if output_ext == 'exr':
                 cv2.imwrite(output_file, xy_plane.numpy())
             elif output_ext == 'png':
-                img = np.clip(xy_plane.numpy(), 0.0, 1.0)
+                # Apply gamma correction (assuming xy_plane contains linear illuminance values)
+                gamma = 1/2.2  # Standard gamma correction value
+                img = np.power(xy_plane.numpy(), gamma)
+                img = np.clip(img, 0.0, 1.0)
                 img = (img * 255.0).astype(np.uint8)
                 cv2.imwrite(output_file, img)
             else:

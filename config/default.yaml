@@ -13,8 +13,8 @@ script:
   toleranceEvents: 4
   enableCompress: True
   enableBlockStorage : True
-  directory: "64SPP_1000FPS"
+  directory: "64SPP_1000FPS_test"
   timeScale: 1000 # meas 0.1ms per frame, in the context of animation
-  exitFrame: 2000 # 0 means never exit
+  exitFrame: 15000 # 0 means never exit
 # videoFPS: 20
 # outputFile: "BistroInterior_Wine_4096spp"

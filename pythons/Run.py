@@ -5,15 +5,15 @@ import argparse
 import TemplateInstantiate
 import time
 
-root_dir = "C:\\Users\\LJF\\Documents\\EventCamera"
+root_dir = "/home/jinfan/EventCamera"
 
 # 0 is "..\Scenes\Bistro_v5_2\BistroInterior_Wine.pyscene"
 # 1 is "..\Scenes\Bistro_v5_2\BistroExterior.pyscene"
 # 2 is "..\Scenes\MEASURE_ONE\MEASURE_ONE.pyscene"
 scenes = [
-    os.path.join(root_dir, "..\\Scenes", "Bistro_v5_2", "BistroInterior_Wine.pyscene"),
-    os.path.join(root_dir, "..\\Scenes", "Bistro_v5_2", "BistroExterior.pyscene"),
-    os.path.join(root_dir, "..\\Scenes", "MEASURE_ONE", "MEASURE_ONE.pyscene")
+    os.path.join(root_dir, "../Scenes", "Bistro_v5_2", "BistroInterior_Wine.pyscene"),
+    os.path.join(root_dir, "../Scenes", "Bistro_v5_2", "BistroExterior.pyscene"),
+    os.path.join(root_dir, "../Scenes", "MEASURE_ONE", "MEASURE_ONE.pyscene")
 ]
 
 def run(args):
@@ -24,7 +24,7 @@ def run(args):
 
     build_type = config.get('build', 'Release')
     assert(build_type in ['Release', 'Debug'])
-    mogwai_path = os.path.join(root_dir, 'build', 'windows-ninja-msvc', 'bin', build_type, 'Mogwai.exe')
+    mogwai_path = os.path.join(root_dir, 'build', 'linux-gcc', 'bin', 'Mogwai')
 
     scene_index = config.get('scene', 0)
     assert(scene_index in [0, 1, 2])
@@ -52,18 +52,20 @@ def run(args):
     exit_frame = script_config.get('exitFrame', 0)
     accumulatePass = script_config.get('accumulatePass', 1)
 
-    if not os.path.exists(os.path.join(root_dir, '..\\output', directory)):
-        os.makedirs(os.path.join(root_dir, '..\\output', directory))
-    if not os.path.exists(os.path.join(root_dir, '..\\output', directory, 'Output')):
-        os.makedirs(os.path.join(root_dir, '..\\output', directory, 'Output'))
-    if not os.path.exists(os.path.join(root_dir, '..\\output', directory, 'OutputDI')):
-        os.makedirs(os.path.join(root_dir, '..\\output', directory, 'OutputDI'))
-    if not os.path.exists(os.path.join(root_dir, '..\\output', directory, 'OutputGI')):
-        os.makedirs(os.path.join(root_dir, '..\\output', directory, 'OutputGI'))
-    if not os.path.exists(os.path.join(root_dir, '..\\output', directory, 'OutputID')):
-        os.makedirs(os.path.join(root_dir, '..\\output', directory, 'OutputID'))
-    if not os.path.exists(os.path.join(root_dir, '..\\output', directory, 'OutputNormal')):
-        os.makedirs(os.path.join(root_dir, '..\\output', directory, 'OutputNormal'))
+    if not os.path.exists(os.path.join('/mnt/ssd2/jinfan/EventDataset', directory)):
+        os.makedirs(os.path.join('/mnt/ssd2/jinfan/EventDataset', directory))
+    if not os.path.exists(os.path.join('/mnt/ssd2/jinfan/EventDataset', directory, 'Output')):
+        os.makedirs(os.path.join('/mnt/ssd2/jinfan/EventDataset', directory, 'Output'))
+    """
+    if not os.path.exists(os.path.join(root_dir, '../output', directory, 'OutputDI')):
+        os.makedirs(os.path.join(root_dir, '../output', directory, 'OutputDI'))
+    if not os.path.exists(os.path.join(root_dir, '../output', directory, 'OutputGI')):
+        os.makedirs(os.path.join(root_dir, '../output', directory, 'OutputGI'))
+    if not os.path.exists(os.path.join(root_dir, '../output', directory, 'OutputID')):
+        os.makedirs(os.path.join(root_dir, '../output', directory, 'OutputID'))
+    if not os.path.exists(os.path.join(root_dir, '../output', directory, 'OutputNormal')):
+        os.makedirs(os.path.join(root_dir, '../output', directory, 'OutputNormal'))
+    """
 
     parameters = {
         "SAMPLES_PER_PIXEL": samples_per_pixel,
@@ -76,21 +78,21 @@ def run(args):
         "BLOCK_STORAGE_ENABLED": enable_block_storage,
         "TIME_SCALE": time_scale,
         "ACCUMULATE_PASS": accumulatePass,
-        "DIRECTORY": f"C:\\\\Users\\\\LJF\\\\Documents\\\\EventCamera\\\\..\\\\output\\\\{directory}"
+        "DIRECTORY": f"/mnt/ssd2/jinfan/EventDataset/{directory}"
     }
     TemplateInstantiate.instantiate_template(template_path, script_output, parameters)
 
     verbosity = config.get('verbosity', 2)
     assert(verbosity in [0, 1, 2, 3, 4, 5])
 
-    cmd = [mogwai_path, f"--script={script}", f"--scene={scene}", f"--verbosity={verbosity}", "--deferred"]
+    cmd = [mogwai_path, f"--script={script}", f"--scene={scene}", f"--verbosity={verbosity}", "--deferred", "--gpu=1"]
     if config.get('headless', False):
         cmd.append("--headless")
 
     try:
         print(f"Running: {' '.join(cmd)}")
         start_time = time.time()
-        process = subprocess.Popen(cmd, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
+        process = subprocess.Popen(cmd)
         process.wait()
         execution_time = time.time() - start_time
         print(f"Execution completed successfully in {execution_time:.2f} seconds ({execution_time/60:.2f} minutes).")

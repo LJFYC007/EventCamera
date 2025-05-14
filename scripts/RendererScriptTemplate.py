@@ -101,10 +101,10 @@ def render_graph_PathTracer():
 
     # g.markOutput("CompressPass.output")
     g.markOutput("BlockStoragePass.output")
-    g.markOutput("BlockStoragePassDI.output")
+    # g.markOutput("BlockStoragePassDI.output")
     # g.markOutput("BlockStoragePassGI.output")
-    g.markOutput("BlockStoragePassID.output")
-    g.markOutput("BlockStoragePassNormal.output")
+    # g.markOutput("BlockStoragePassID.output")
+    # g.markOutput("BlockStoragePassNormal.output")
 
     return g
 
