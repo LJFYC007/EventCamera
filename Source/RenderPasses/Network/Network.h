@@ -82,7 +82,7 @@ private:
     /// Accumulate Pass Frames
     uint32_t mAccumulatePass = 1;
 
-    const uint32_t streamCnt = 3;
+    const uint32_t streamCnt = 1;
     std::vector<std::string> mpOutputNames, mpInputNames;
     std::unique_ptr<nvinfer1::IRuntime> mpRuntime;
     std::vector<std::unique_ptr<nvinfer1::ICudaEngine>> mpEngine;

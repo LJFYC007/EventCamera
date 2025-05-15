@@ -1,6 +1,6 @@
 Texture2D<float4> input;
 RWTexture2D<float> lastTexture;
-RWStructuredBuffer<float> output;
+RWStructuredBuffer<half> output;
 
 cbuffer PerFrameCB
 {

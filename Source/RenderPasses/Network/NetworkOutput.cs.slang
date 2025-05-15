@@ -1,4 +1,4 @@
-RWStructuredBuffer<float> input;
+RWStructuredBuffer<half> input;
 RWTexture2D<float4> output;
 
 cbuffer PerFrameCB

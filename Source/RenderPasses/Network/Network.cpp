@@ -51,7 +51,7 @@ void Network::prepareResources()
         return;
 
     auto vbBindFlags = ResourceBindFlags::ShaderResource | ResourceBindFlags::UnorderedAccess | ResourceBindFlags::Shared;
-    size_t type_size = sizeof(float);
+    size_t type_size = sizeof(float) / 2;
     size_t storage = (mFrameDim.x * mFrameDim.y / batchSize + 1) * batchSize * networkInputLength * type_size;
     mpNetworkInputBuffer = mpDevice->createBuffer(storage, vbBindFlags);
     mpNetworkOutputBuffer = mpDevice->createBuffer(storage * 2, vbBindFlags);
@@ -153,8 +153,22 @@ Network::Network(ref<Device> pDevice, const Properties& props) : RenderPass(pDev
     config->addOptimizationProfile(optProfile);
     config->setBuilderOptimizationLevel(5);
 
+    /*
     config->setFlag(nvinfer1::BuilderFlag::kTF32);
     Falcor::logInfo("Use FP32");
+    */
+    if (!builder->platformHasFastFp16())
+    {
+        auto msg = "Error: GPU does not support FP16 precision";
+        logError(msg);
+        throw std::runtime_error(msg);
+    }
+    config->setFlag(nvinfer1::BuilderFlag::kFP16);
+    for (int i = 0; i < network->getNbInputs(); ++i)
+        network->getInput(i)->setType(nvinfer1::DataType::kHALF);
+    for (int i = 0; i < network->getNbOutputs(); ++i)
+        network->getOutput(i)->setType(nvinfer1::DataType::kHALF);
+    Falcor::logInfo("Use FP16");
 
     mpStream.resize(streamCnt);
     for (uint i = 0; i < streamCnt; ++i)
@@ -278,9 +292,8 @@ void Network::execute(RenderContext* pRenderContext, const RenderData& renderDat
 
     // ----------------- Do the inference -----------------
     uint numPatches = mFrameDim.x * mFrameDim.y / batchSize + 1;
-    float* base_input_ptr = static_cast<float*>(mpNetworkInputBuffer->getCudaMemory()->getMappedData());
-    float* base_output_ptr = static_cast<float*>(mpNetworkOutputBuffer->getCudaMemory()->getMappedData());
-    size_t type_size = sizeof(float);
+    float16_t* base_input_ptr = static_cast<float16_t*>(mpNetworkInputBuffer->getCudaMemory()->getMappedData());
+    float16_t* base_output_ptr = static_cast<float16_t*>(mpNetworkOutputBuffer->getCudaMemory()->getMappedData());
 
     auto inference_start_time = std::chrono::high_resolution_clock::now();
     for (uint i = 0; i < numPatches; i++)
