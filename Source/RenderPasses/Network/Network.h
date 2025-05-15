@@ -28,7 +28,7 @@
 #pragma once
 #include "Falcor.h"
 #include "RenderGraph/RenderPass.h"
-#include "NVinfer.h"
+#include "NvInfer.h"
 #include "NvOnnxParser.h"
 #include <vector>
 

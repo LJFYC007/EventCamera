@@ -164,7 +164,7 @@ Network::Network(ref<Device> pDevice, const Properties& props) : RenderPass(pDev
         optProfile->setDimensions(inputName, nvinfer1::OptProfileSelector::kMAX, inputDim);
     }
     config->addOptimizationProfile(optProfile);
-    config->setBuilderOptimizationLevel(5);
+    config->setBuilderOptimizationLevel(1);
 
     /*
     config->setFlag(nvinfer1::BuilderFlag::kTF32);
@@ -214,7 +214,7 @@ Network::Network(ref<Device> pDevice, const Properties& props) : RenderPass(pDev
     mpRuntime = std::unique_ptr<nvinfer1::IRuntime>(nvinfer1::createInferRuntime(mylogger));
     if (mpRuntime.get() == nullptr)
         logFatal("runtime is null");
-    auto ret = cudaSetDevice(0);
+    auto ret = cudaSetDevice(1);
     if (ret != 0)
     {
         int numGPUs;

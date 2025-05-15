@@ -1,6 +1,6 @@
 from falcor import *
 
-model_path = "F:\\EventCamera\\config\\pulse_classifier.onnx"
+model_path = "/home/jinfan/EventCamera/config/pulse_classifier.onnx"
 
 def render_graph_PathTracer():
     g = RenderGraph("PathTracer")
@@ -25,7 +25,7 @@ def render_graph_PathTracer():
         'model_path': model_path,
         'batchSize': 4096,
         'networkInputLength': 51,
-        'directory': 'F:\\output',
+        'directory': '/home/jinfan/output',
     })
     g.addPass(Network, "Network")
 
@@ -44,3 +44,6 @@ except NameError: None
 
 m.clock.timeScale = 1000
 m.clock.exitFrame = 15000
+m.frameCapture.outputDir = "/home/jinfan/output"
+m.frameCapture.baseFilename = ""
+

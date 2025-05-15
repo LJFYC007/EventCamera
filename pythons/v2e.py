@@ -8,7 +8,7 @@ import platform
 import argparse
 
 # Define v2e directory
-v2e_dir = r"C:\Users\LJF\Documents\v2e\v2e.py"
+v2e_dir = "/home/jinfan/render_v2e/v2e.py"
 
 def parse_arguments():
     """Parse command line arguments"""

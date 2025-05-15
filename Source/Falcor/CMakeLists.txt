@@ -1000,17 +1000,13 @@ target_link_libraries(Falcor
 )
 
 # tensorrt
+target_link_libraries(Falcor
+    PUBLIC
+    trt::nvinfer
+    trt::nvinfer_plugin
+    trt::nvonnxparser
+)
 target_include_directories(Falcor PUBLIC ${TensorRT_INCLUDE_DIRS})
-target_link_libraries(Falcor PUBLIC ${TensorRT_LIBRARIES})
-
-foreach (source_file ${TensorRT_DLLS})
-    message("Copy ${source_file}")
-    add_custom_command(TARGET Falcor POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy
-            ${source_file}
-            $<TARGET_FILE_DIR:Falcor>
-    )
-endforeach()
 
 
 target_include_directories(Falcor
