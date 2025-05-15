@@ -43,6 +43,9 @@ const std::string kInputChannelEventImage = "input";
 const std::string kOutputChannelEventImage = "output";
 const std::string kAccumulatePass = "accumulatePass";
 const std::string kONNXModelPath = "model_path";
+const std::string kDirectory = "directory";
+const std::string kNetworkInputLength = "networkInputLength";
+const std::string kBatchSize = "batchSize";
 } // namespace
 
 void Network::prepareResources()
@@ -57,6 +60,10 @@ void Network::prepareResources()
     mpNetworkOutputBuffer = mpDevice->createBuffer(storage * 2, vbBindFlags);
     mpLastTexture = mpDevice->createTexture2D(
         mFrameDim.x, mFrameDim.y, ResourceFormat::R32Float, 1, 1, nullptr, ResourceBindFlags::ShaderResource | ResourceBindFlags::UnorderedAccess);
+
+    type_size = sizeof(uint2);
+    mpCompressBuffer = mpDevice->createStructuredBuffer(type_size, mFrameDim.x * mFrameDim.y, vbBindFlags, MemoryType::DeviceLocal, nullptr, true);
+    mpReadbackBuffer = mpDevice->createBuffer(mpCompressBuffer->getSize(), ResourceBindFlags::None, MemoryType::ReadBack);
 }
 
 inline void checkCudaErrorCode(cudaError_t code)
@@ -89,6 +96,12 @@ Network::Network(ref<Device> pDevice, const Properties& props) : RenderPass(pDev
             mAccumulatePass = value;
         else if (key == kONNXModelPath)
             onnxModelPath = props.get<std::string>(key);
+        else if (key == kDirectory)
+            mDirectoryPath = props.get<std::string>(key);
+        else if (key == kNetworkInputLength)
+            networkInputLength = value;
+        else if (key == kBatchSize)
+            batchSize = value;
         else
             logWarning("Unknown property '{}' in Network properties.", key);
     }
@@ -235,6 +248,9 @@ Properties Network::getProperties() const
 {
     Properties props;
     props[kAccumulatePass] = mAccumulatePass;
+    props[kDirectory] = mDirectoryPath;
+    props[kNetworkInputLength] = networkInputLength;
+    props[kBatchSize] = batchSize;
     return props;
 }
 
@@ -335,7 +351,30 @@ void Network::execute(RenderContext* pRenderContext, const RenderData& renderDat
     vars["output"] = outputTexture;
     vars["PerFrameCB"]["gResolution"] = mFrameDim;
     vars["PerFrameCB"]["gNetworkInputLength"] = networkInputLength;
+    vars["PerFrameCB"]["gFrame"] = mFrame - networkInputLength / 2;
+    pRenderContext->clearUAVCounter(mpCompressBuffer, 0);
+    vars["buffer_output"] = mpCompressBuffer;
+
     mpNetworkOutputPass->execute(pRenderContext, uint3(mFrameDim, 1));
+
+    if ( mFrame >= networkInputLength )
+    {
+        ref<Buffer> pCounterBuffer = mpCompressBuffer->getUAVCounter();
+        pRenderContext->copyBufferRegion(mpReadbackBuffer.get(), 0, pCounterBuffer.get(), 0, pCounterBuffer->getSize());
+        mpDevice->wait();
+        const uint32_t pCounterValue = *static_cast<const uint32_t*>(mpReadbackBuffer->map());
+        const uint32_t pDataSize = pCounterValue * sizeof(uint2);
+        mpReadbackBuffer->unmap();
+
+        pRenderContext->copyBufferRegion(mpReadbackBuffer.get(), 0, mpCompressBuffer.get(), 0, pDataSize);
+        mpDevice->wait();
+        const uint* data = reinterpret_cast<const uint*>(mpReadbackBuffer->map());
+        std::string filename = mDirectoryPath + "\\data-" + std::to_string(mFrame) + ".bin";
+        std::ofstream file(filename, std::ios::binary);
+        file.write(reinterpret_cast<const char*>(data), pDataSize);
+        file.close();
+        mpReadbackBuffer->unmap();
+    }
 
     auto end_time = std::chrono::high_resolution_clock::now();
     const auto inference_time_milli = 1000.0 * std::chrono::duration_cast<std::chrono::duration<double> >(inference_end_time - inference_start_time).count();

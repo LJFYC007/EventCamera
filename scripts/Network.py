@@ -20,7 +20,13 @@ def render_graph_PathTracer():
     g.addEdge("VBufferRT.mvec", "PathTracer.mvec")
     g.addEdge("PathTracer.color", "AccumulatePass.input")
 
-    Network = createPass("Network", {'accumulatePass': 64, 'model_path': model_path})
+    Network = createPass("Network", {
+        'accumulatePass': 64,
+        'model_path': model_path,
+        'batchSize': 4096,
+        'networkInputLength': 51,
+        'directory': 'F:\\output',
+    })
     g.addPass(Network, "Network")
 
     g.addEdge("AccumulatePass.output", "Network.input")
@@ -37,3 +43,4 @@ try: m.addGraph(PathTracer)
 except NameError: None
 
 m.clock.timeScale = 1000
+m.clock.exitFrame = 15000

@@ -59,10 +59,17 @@ public:
 private:
     void prepareResources();
 
-    const uint32_t networkInputLength = 51;
-    const uint32_t batchSize = 4096;
+    uint32_t networkInputLength;
+    uint32_t batchSize;
     ref<Buffer> mpNetworkInputBuffer;
     ref<Buffer> mpNetworkOutputBuffer;
+
+    /// Path to the directory where we store compressed data
+    std::string mDirectoryPath;
+    /// GPU buffer used for compression operations
+    ref<Buffer> mpCompressBuffer;
+    /// CPU-readable buffer for transferring compressed data from GPU
+    ref<Buffer> mpReadbackBuffer;
 
     ref<Texture> mpLastTexture;
 
@@ -82,7 +89,7 @@ private:
     /// Accumulate Pass Frames
     uint32_t mAccumulatePass = 1;
 
-    const uint32_t streamCnt = 1;
+    const uint32_t streamCnt = 3;
     std::vector<std::string> mpOutputNames, mpInputNames;
     std::unique_ptr<nvinfer1::IRuntime> mpRuntime;
     std::vector<std::unique_ptr<nvinfer1::ICudaEngine>> mpEngine;
