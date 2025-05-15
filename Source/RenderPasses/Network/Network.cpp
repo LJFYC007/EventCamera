@@ -52,8 +52,9 @@ void Network::prepareResources()
 
     auto vbBindFlags = ResourceBindFlags::ShaderResource | ResourceBindFlags::UnorderedAccess | ResourceBindFlags::Shared;
     size_t type_size = sizeof(float);
-    mpNetworkInputBuffer = mpDevice->createBuffer(type_size * mFrameDim.x * mFrameDim.y * networkInputLength, vbBindFlags);
-    mpNetworkOutputBuffer = mpDevice->createBuffer(type_size * mFrameDim.x * mFrameDim.y * networkInputLength * 2, vbBindFlags);
+    size_t storage = (mFrameDim.x * mFrameDim.y / batchSize + 1) * batchSize * networkInputLength * type_size;
+    mpNetworkInputBuffer = mpDevice->createBuffer(storage, vbBindFlags);
+    mpNetworkOutputBuffer = mpDevice->createBuffer(storage * 2, vbBindFlags);
     mpLastTexture = mpDevice->createTexture2D(
         mFrameDim.x, mFrameDim.y, ResourceFormat::R32Float, 1, 1, nullptr, ResourceBindFlags::ShaderResource | ResourceBindFlags::UnorderedAccess);
 }
@@ -141,7 +142,7 @@ Network::Network(ref<Device> pDevice, const Properties& props) : RenderPass(pDev
         auto inputName = network->getInput(i)->getName();
         mpInputNames.push_back(inputName);
         Falcor::logInfo("inputName {} is {}", i, inputName);
-        int32_t inputB = 1024;
+        int32_t inputB = batchSize;
         int32_t inputC = 1;
         int32_t inputL = networkInputLength;
         const auto inputDim = nvinfer1::Dims3(inputB, inputC, inputL);
@@ -155,8 +156,12 @@ Network::Network(ref<Device> pDevice, const Properties& props) : RenderPass(pDev
     config->setFlag(nvinfer1::BuilderFlag::kTF32);
     Falcor::logInfo("Use FP32");
 
-    checkCudaErrorCode(cudaStreamCreate(&mpStream));
-    config->setProfileStream(mpStream);
+    mpStream.resize(streamCnt);
+    for (uint i = 0; i < streamCnt; ++i)
+    {
+        checkCudaErrorCode(cudaStreamCreate(&mpStream[i]));
+        config->setProfileStream(mpStream[i]);
+    }
 
     // Build the engine
     // If this call fails, it is suggested to increase the logger verbosity to
@@ -192,16 +197,22 @@ Network::Network(ref<Device> pDevice, const Properties& props) : RenderPass(pDev
         logError(errMsg);
         throw std::runtime_error(errMsg);
     }
-    mpEngine = std::unique_ptr<nvinfer1::ICudaEngine>(mpRuntime->deserializeCudaEngine(plan->data(), plan->size()));
-    if (mpEngine.get() == nullptr)
-        logFatal("engine is null");
 
-    mpContext = std::unique_ptr<nvinfer1::IExecutionContext>(mpEngine->createExecutionContext());
-    if (mpContext.get() == nullptr)
-        logFatal("context is null");
+    mpContext.resize(streamCnt);
+    mpEngine.resize(streamCnt);
+    for (uint i = 0; i < streamCnt; ++i)
+    {
+        mpEngine[i] = std::unique_ptr<nvinfer1::ICudaEngine>(mpRuntime->deserializeCudaEngine(plan->data(), plan->size()));
+        if (mpEngine[i].get() == nullptr)
+            logFatal("engine is null");
+
+        mpContext[i] = std::unique_ptr<nvinfer1::IExecutionContext>(mpEngine[i]->createExecutionContext());
+        if (mpContext[i].get() == nullptr)
+            logFatal("context is null");
+    }
 
     FALCOR_CHECK(1 == network->getNbOutputs(), "output tensor number mismatch!");
-    auto name = mpEngine->getIOTensorName(mpEngine->getNbIOTensors() - 1);
+    auto name = mpEngine[0]->getIOTensorName(mpEngine[0]->getNbIOTensors() - 1);
     Falcor::logInfo("output tensor name {} is {}", 0, name);
     mpOutputNames.push_back(name);
 }
@@ -266,28 +277,30 @@ void Network::execute(RenderContext* pRenderContext, const RenderData& renderDat
 
 
     // ----------------- Do the inference -----------------
-    int numPatches = 900; // mFrameDim.x * mFrameDim.y / 1024;
-    int batchSize = 1024;
+    uint numPatches = mFrameDim.x * mFrameDim.y / batchSize + 1;
     float* base_input_ptr = static_cast<float*>(mpNetworkInputBuffer->getCudaMemory()->getMappedData());
     float* base_output_ptr = static_cast<float*>(mpNetworkOutputBuffer->getCudaMemory()->getMappedData());
     size_t type_size = sizeof(float);
 
     auto inference_start_time = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < numPatches; i++)
+    for (uint i = 0; i < numPatches; i++)
     {
+        uint id = i % streamCnt;
         void* inputAddr = base_input_ptr + i * networkInputLength * batchSize;
-        bool res = mpContext->setTensorAddress(mpInputNames[0].c_str(), inputAddr);
+        bool res = mpContext[id]->setTensorAddress(mpInputNames[0].c_str(), inputAddr);
         if (!res)
             logFatal("Set input tensor {} address failed!", mpInputNames[0]);
 
         void* outputAddr = base_output_ptr + i * networkInputLength * batchSize * 2;
-        res = mpContext->setTensorAddress(mpOutputNames[0].c_str(), outputAddr);
+        res = mpContext[id]->setTensorAddress(mpOutputNames[0].c_str(), outputAddr);
         if (!res)
             logFatal("Set output tensor address failed!");
 
-        mpContext->enqueueV3(mpStream);
+        mpContext[id]->enqueueV3(mpStream[id]);
     }
-    checkCudaErrorCode(cudaStreamSynchronize(mpStream));
+    for (uint i = 0; i < streamCnt; i++)
+        checkCudaErrorCode(cudaStreamSynchronize(mpStream[i]));
+
     auto inference_end_time = std::chrono::high_resolution_clock::now();
 
     // ----------------- Do the output pass -----------------
@@ -319,4 +332,8 @@ void Network::execute(RenderContext* pRenderContext, const RenderData& renderDat
 
 void Network::renderUI(Gui::Widgets& widget) {}
 
-Network::~Network() { checkCudaErrorCode(cudaStreamDestroy(mpStream)); }
+Network::~Network()
+{
+    for (uint i = 0; i < streamCnt; i++)
+        checkCudaErrorCode(cudaStreamDestroy(mpStream[i]));
+}

@@ -60,6 +60,7 @@ private:
     void prepareResources();
 
     const uint32_t networkInputLength = 51;
+    const uint32_t batchSize = 4096;
     ref<Buffer> mpNetworkInputBuffer;
     ref<Buffer> mpNetworkOutputBuffer;
 
@@ -81,9 +82,10 @@ private:
     /// Accumulate Pass Frames
     uint32_t mAccumulatePass = 1;
 
+    const uint32_t streamCnt = 3;
     std::vector<std::string> mpOutputNames, mpInputNames;
     std::unique_ptr<nvinfer1::IRuntime> mpRuntime;
-    std::unique_ptr<nvinfer1::ICudaEngine> mpEngine;
-    std::unique_ptr<nvinfer1::IExecutionContext> mpContext;
-    cudaStream_t mpStream;
+    std::vector<std::unique_ptr<nvinfer1::ICudaEngine>> mpEngine;
+    std::vector<std::unique_ptr<nvinfer1::IExecutionContext>> mpContext;
+    std::vector<cudaStream_t> mpStream;
 };

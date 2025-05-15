@@ -19,15 +19,16 @@ def render_graph_PathTracer():
     g.addEdge("VBufferRT.viewW", "PathTracer.viewW")
     g.addEdge("VBufferRT.mvec", "PathTracer.mvec")
     g.addEdge("PathTracer.color", "AccumulatePass.input")
-    g.markOutput("AccumulatePass.output")
-    g.markOutput("PathTracer.DI")
-    g.markOutput("PathTracer.GI")
 
     Network = createPass("Network", {'accumulatePass': 64, 'model_path': model_path})
     g.addPass(Network, "Network")
 
     g.addEdge("AccumulatePass.output", "Network.input")
     g.markOutput("Network.output")
+
+    g.markOutput("AccumulatePass.output")
+    g.markOutput("PathTracer.DI")
+    g.markOutput("PathTracer.GI")
 
     return g
 
