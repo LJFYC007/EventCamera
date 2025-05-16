@@ -85,7 +85,7 @@ def run(args):
     verbosity = config.get('verbosity', 2)
     assert(verbosity in [0, 1, 2, 3, 4, 5])
 
-    cmd = [mogwai_path, f"--script={script}", f"--scene={scene}", f"--verbosity={verbosity}", "--deferred", "--gpu=1"]
+    cmd = [mogwai_path, f"--script={script}", f"--scene={scene}", f"--verbosity={verbosity}", "--deferred"]
     if config.get('headless', False):
         cmd.append("--headless")
 

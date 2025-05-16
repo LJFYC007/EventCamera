@@ -3,9 +3,11 @@ build: "Release"
 headless: True
 verbosity: 2
 scene: 0 # 0 is the bistro interior, 1 is the bistro exterior, 2 is the measure_one
+width: 640
+height: 360
 script:
   name: "EventCamera"
-  samplesPerPixel: 1
+  samplesPerPixel: 32
   accumulatePass: 64 # this means 64 * 64 = 4096 spp
   russianRoulette: False
   threshold: 1.7
@@ -13,8 +15,8 @@ script:
   toleranceEvents: 4
   enableCompress: True
   enableBlockStorage : True
-  directory: "64SPP_1000FPS_test"
-  timeScale: 1000 # meas 0.1ms per frame, in the context of animation
-  exitFrame: 15000 # 0 means never exit
-# videoFPS: 20
-# outputFile: "BistroInterior_Wine_4096spp"
+  timeScale: 60
+  networkTimeScale: 1000
+  exitTime: 10
+  networkModel: "F:\\\\EventCamera\\\\config\\\\bipolar_bilif_e30.onnx"
+  batchSize: 4096

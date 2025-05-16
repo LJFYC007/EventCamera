@@ -57,7 +57,7 @@ void Network::prepareResources()
     size_t type_size = sizeof(float) / 2;
     size_t storage = (mFrameDim.x * mFrameDim.y / batchSize + 1) * batchSize * networkInputLength * type_size;
     mpNetworkInputBuffer = mpDevice->createBuffer(storage, vbBindFlags);
-    mpNetworkOutputBuffer = mpDevice->createBuffer(storage * 2, vbBindFlags);
+    mpNetworkOutputBuffer = mpDevice->createBuffer(storage, vbBindFlags);
     mpLastTexture = mpDevice->createTexture2D(
         mFrameDim.x, mFrameDim.y, ResourceFormat::R32Float, 1, 1, nullptr, ResourceBindFlags::ShaderResource | ResourceBindFlags::UnorderedAccess);
 
@@ -320,7 +320,7 @@ void Network::execute(RenderContext* pRenderContext, const RenderData& renderDat
         if (!res)
             logFatal("Set input tensor {} address failed!", mpInputNames[0]);
 
-        void* outputAddr = base_output_ptr + i * networkInputLength * batchSize * 2;
+        void* outputAddr = base_output_ptr + i * networkInputLength * batchSize;
         res = mpContext[id]->setTensorAddress(mpOutputNames[0].c_str(), outputAddr);
         if (!res)
             logFatal("Set output tensor address failed!");

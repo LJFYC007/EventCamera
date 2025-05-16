@@ -115,6 +115,8 @@ struct VBufferRT
             motionVector = calcMotionVector(pixelPos, prevPosH, frameDim) + float2(gScene.camera.data.jitterX, -gScene.camera.data.jitterY);
         }
 
+        depth = length(v.posW - gScene.camera.data.posW);
+
         if (is_valid(gDepth))
             gDepth[pixel] = depth;
         if (is_valid(gMotionVector))
