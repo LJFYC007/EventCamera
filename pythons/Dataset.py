@@ -8,18 +8,17 @@ from pathlib import Path
 
 root_dir = "F:\\EventCamera"
 
-# 0 is "..\Scenes\Bistro_v5_2\BistroInterior_Wine.pyscene"
-# 1 is "..\Scenes\Bistro_v5_2\BistroExterior.pyscene"
-# 2 is "..\Scenes\Bistro_v5_2\BistroExterior_Night.pyscene"
-# 3 is "..\Scenes\MEASURE_ONE\MEASURE_ONE.pyscene"
 scenes = [
     os.path.join(root_dir, "../Scenes", "Bistro_v5_2", "BistroInterior_Wine.pyscene"),
     os.path.join(root_dir, "../Scenes", "Bistro_v5_2", "BistroExterior.pyscene"),
     os.path.join(root_dir, "../Scenes", "Bistro_v5_2", "BistroExterior_Night.pyscene"),
-    os.path.join(root_dir, "../Scenes", "MEASURE_ONE", "MEASURE_ONE.pyscene")
+    os.path.join(root_dir, "../Scenes", "MEASURE_ONE", "MEASURE_ONE.pyscene"),
+    os.path.join(root_dir, "../Scenes", "staircase", "staircase.pyscene"),
+    os.path.join(root_dir, "../Scenes", "kitchen", "kitchen.pyscene"),
+    os.path.join(root_dir, "../Scenes", "classroom", "classroom.pyscene"),
 ]
 
-def run(args):
+def run(args, scene_index):
     print(f"config file: {args.config}")
     with open(args.config, 'r') as file:
         config = yaml.safe_load(file)
@@ -31,8 +30,7 @@ def run(args):
     width = config.get('width', 0)
     height = config.get('height', 0)
 
-    scene_index = config.get('scene', 0)
-    assert(scene_index in [0, 1, 2])
+    assert(scene_index in [0, 1, 2, 4, 5, 6])
     scene = scenes[scene_index]
 
     # Use TemplateInstantiate.py to create script based on config parameters
@@ -51,13 +49,13 @@ def run(args):
     enable_compress = script_config.get('enableCompress', True)
     enable_block_storage = script_config.get('enableBlockStorage', False)
     directory = Path(scenes[scene_index]).stem
-    directory = os.path.join(root_dir, "..\\Dataset", directory)
+    directory = os.path.join(root_dir, "..\\Dataset-HDR1", directory)
     network_model = script_config.get('networkModel')
     batch_size = script_config.get('batchSize', 64)
 
     time_scale = script_config.get('timeScale', 10000.0)
     network_time_scale = script_config.get('networkTimeScale', 10000.0)
-    exit_time = script_config.get('exitTime', 0)
+    exit_time = 20 if scene_index <= 2 else 10
     accumulatePass = script_config.get('accumulatePass', 1)
 
     if not os.path.exists(os.path.join(directory)):
@@ -94,6 +92,7 @@ def run(args):
     if config.get('headless', False):
         cmd.append("--headless")
 
+    """
     try:
         print(f"Running Dataset: {' '.join(cmd)}")
         start_time = time.time()
@@ -105,6 +104,7 @@ def run(args):
         print(f"Error: Mogwai.exe not found at path: {mogwai_path}")
     except Exception as e:
         print(f"Unexpected error: {e}")
+    """
 
     cmd = [mogwai_path, f"--script={network_script}", f"--scene={scene}", f"--verbosity={verbosity}", "--deferred", f"--width={width}", f"--height={height}"]
     if config.get('headless', False):
@@ -141,5 +141,6 @@ def run(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Running configuration.")
     parser.add_argument('--config', type=str, default="config/default.yaml", help='Path to the YAML configuration file.')
+    parser.add_argument('--scene', type=int, default=0, help='Scene index to run.')
     args = parser.parse_args()
-    run(args)
+    run(args, args.scene)

@@ -2,7 +2,6 @@ name: "default"
 build: "Release"
 headless: True
 verbosity: 2
-scene: 0 # 0 is the bistro interior, 1 is the bistro exterior, 2 is the measure_one
 width: 640
 height: 360
 script:
@@ -15,8 +14,7 @@ script:
   toleranceEvents: 4
   enableCompress: True
   enableBlockStorage : True
-  timeScale: 60
+  timeScale: 610
   networkTimeScale: 1000
-  exitTime: 10
-  networkModel: "F:\\\\EventCamera\\\\config\\\\bipolar_bilif_e30.onnx"
+  networkModel: "F:\\\\EventCamera\\\\config\\\\bipolar_bilif_e100.onnx"
   batchSize: 4096

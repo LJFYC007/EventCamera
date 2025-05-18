@@ -24,7 +24,7 @@ def render_graph_PathTracer():
         'accumulatePass': $ACCUMULATE_PASS$,
         'model_path': model_path,
         'batchSize': $BATCH_SIZE$,
-        'networkInputLength': 51,
+        'networkInputLength': 201,
         'directory': "$DIRECTORY$\\bin",
     })
     g.addPass(Network, "Network")
