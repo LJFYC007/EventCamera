@@ -63,6 +63,10 @@ private:
     uint32_t batchSize;
     ref<Buffer> mpNetworkInputBuffer;
     ref<Buffer> mpNetworkOutputBuffer;
+    ref<Buffer> mpVBuffer;
+
+    float tau;
+    float threshold;
 
     /// Path to the directory where we store compressed data
     std::string mDirectoryPath;

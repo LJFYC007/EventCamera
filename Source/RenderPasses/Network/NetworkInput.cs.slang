@@ -20,7 +20,7 @@ void main(uint3 dispatchThreadID: SV_DispatchThreadID)
         for ( uint i = 0; i + 1 < gNetworkInputLength; i++ )
             output[index + i] = output[index + i + 1];
         float x = (0.2126f * color.r + 0.7152f * color.g + 0.0722f * color.b) * 255.f;
-        float threshold = 20.f;
+        float threshold = 3.f;
         float f = (1.f / threshold) * log(threshold);
         float y = x <= threshold ? x * f : log(x);
         float rounding = 1e8f;

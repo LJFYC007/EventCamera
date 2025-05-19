@@ -46,6 +46,8 @@ const std::string kONNXModelPath = "model_path";
 const std::string kDirectory = "directory";
 const std::string kNetworkInputLength = "networkInputLength";
 const std::string kBatchSize = "batchSize";
+const std::string kTau = "tau";
+const std::string kThreshold = "threshold";
 } // namespace
 
 void Network::prepareResources()
@@ -55,9 +57,10 @@ void Network::prepareResources()
 
     auto vbBindFlags = ResourceBindFlags::ShaderResource | ResourceBindFlags::UnorderedAccess | ResourceBindFlags::Shared;
     size_t type_size = sizeof(float) / 2;
-    size_t storage = (mFrameDim.x * mFrameDim.y / batchSize + 1) * batchSize * networkInputLength * type_size;
-    mpNetworkInputBuffer = mpDevice->createBuffer(storage, vbBindFlags);
+    size_t storage = (mFrameDim.x * mFrameDim.y / batchSize + 1) * batchSize * type_size;
+    mpNetworkInputBuffer = mpDevice->createBuffer(storage * networkInputLength, vbBindFlags);
     mpNetworkOutputBuffer = mpDevice->createBuffer(storage, vbBindFlags);
+    mpVBuffer = mpDevice->createBuffer(storage * 2, vbBindFlags);
     mpLastTexture = mpDevice->createTexture2D(
         mFrameDim.x, mFrameDim.y, ResourceFormat::R32Float, 1, 1, nullptr, ResourceBindFlags::ShaderResource | ResourceBindFlags::UnorderedAccess);
 
@@ -102,6 +105,10 @@ Network::Network(ref<Device> pDevice, const Properties& props) : RenderPass(pDev
             networkInputLength = value;
         else if (key == kBatchSize)
             batchSize = value;
+        else if (key == kTau)
+            tau = value;
+        else if (key == kThreshold)
+            threshold = value;
         else
             logWarning("Unknown property '{}' in Network properties.", key);
     }
@@ -251,6 +258,8 @@ Properties Network::getProperties() const
     props[kDirectory] = mDirectoryPath;
     props[kNetworkInputLength] = networkInputLength;
     props[kBatchSize] = batchSize;
+    props[kTau] = tau;
+    props[kThreshold] = threshold;
     return props;
 }
 
@@ -320,7 +329,7 @@ void Network::execute(RenderContext* pRenderContext, const RenderData& renderDat
         if (!res)
             logFatal("Set input tensor {} address failed!", mpInputNames[0]);
 
-        void* outputAddr = base_output_ptr + i * networkInputLength * batchSize;
+        void* outputAddr = base_output_ptr + i * batchSize;
         res = mpContext[id]->setTensorAddress(mpOutputNames[0].c_str(), outputAddr);
         if (!res)
             logFatal("Set output tensor address failed!");
@@ -349,9 +358,12 @@ void Network::execute(RenderContext* pRenderContext, const RenderData& renderDat
     vars = mpNetworkOutputPass->getRootVar();
     vars["input"] = mpNetworkOutputBuffer;
     vars["output"] = outputTexture;
+    vars["vBuffer"] = mpVBuffer;
     vars["PerFrameCB"]["gResolution"] = mFrameDim;
     vars["PerFrameCB"]["gNetworkInputLength"] = networkInputLength;
     vars["PerFrameCB"]["gFrame"] = mFrame - networkInputLength / 2;
+    vars["PerFrameCB"]["gTau"] = tau;
+    vars["PerFrameCB"]["gThreshold"] = threshold;
     pRenderContext->clearUAVCounter(mpCompressBuffer, 0);
     vars["buffer_output"] = mpCompressBuffer;
 

@@ -49,9 +49,11 @@ def run(args, scene_index):
     enable_compress = script_config.get('enableCompress', True)
     enable_block_storage = script_config.get('enableBlockStorage', False)
     directory = Path(scenes[scene_index]).stem
-    directory = os.path.join(root_dir, "..\\Dataset-HDR1", directory)
+    directory = os.path.join(root_dir, "..\\Dataset", directory)
     network_model = script_config.get('networkModel')
     batch_size = script_config.get('batchSize', 64)
+    tau = script_config.get('tau')
+    vThreshold = script_config.get('vThreshold')
 
     time_scale = script_config.get('timeScale', 10000.0)
     network_time_scale = script_config.get('networkTimeScale', 10000.0)
@@ -79,6 +81,8 @@ def run(args, scene_index):
         "DIRECTORY": directory,
         "NETWORK_MODEL": network_model,
         "BATCH_SIZE": batch_size,
+        "TAU": tau,
+        "VTHRESHOLD": vThreshold,
         "NETWORK_TIME_SCALE": network_time_scale,
         "NETWORK_EXIT_FRAME": exit_time * network_time_scale * accumulatePass,
     }

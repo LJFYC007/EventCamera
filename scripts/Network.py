@@ -1,6 +1,6 @@
 from falcor import *
 
-model_path = "F:\\EventCamera\\config\\bipolar_bilif_e100.onnx"
+model_path = "F:\\EventCamera\\config\\final_model_v1_log_e24"
 
 def render_graph_PathTracer():
     g = RenderGraph("PathTracer")
@@ -24,8 +24,10 @@ def render_graph_PathTracer():
         'accumulatePass': 64,
         'model_path': model_path,
         'batchSize': 4096,
-        'networkInputLength': 201,
-        'directory': "F:\EventCamera\..\Dataset-HDR1\BistroInterior_Wine\\bin",
+        'networkInputLength': 43,
+        'directory': "F:\EventCamera\..\Dataset\BistroInterior_Wine\\bin",
+        'tau': 1000.0,
+        'threshold': 1.0,
     })
     g.addPass(Network, "Network")
 
