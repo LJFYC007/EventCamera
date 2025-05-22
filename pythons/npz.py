@@ -52,7 +52,7 @@ def process_files(input_dir, pattern, width, height, save_npz, show):
         t_all = np.concatenate(all_t)
         p_all = np.concatenate(all_p)
 
-        output_file = Path(input_dir).parent / 'events-Final-v1.npz'
+        output_file = Path(input_dir).parent / 'events-Final-v2.npz'
         np.savez(output_file, t=t_all, x=x_all, y=y_all, p=p_all)
         print(f"Saved merged events to {output_file}")
 

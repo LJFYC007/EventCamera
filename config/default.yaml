@@ -16,7 +16,7 @@ script:
   enableBlockStorage : True
   timeScale: 610
   networkTimeScale: 1000
-  networkModel: "F:\\\\EventCamera\\\\config\\\\final_model_v1_log_e24"
+  networkModel: "F:\\\\EventCamera\\\\config\\\\final_model_v2_log_e24.onnx"
   batchSize: 4096
   tau: 1000.0
   vThreshold: 1.0

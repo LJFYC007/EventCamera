@@ -1,6 +1,6 @@
 from falcor import *
 
-model_path = "F:\\EventCamera\\config\\final_model_v1_log_e24"
+model_path = "F:\\EventCamera\\config\\final_model_v2_log_e24.onnx"
 
 def render_graph_PathTracer():
     g = RenderGraph("PathTracer")
@@ -25,7 +25,7 @@ def render_graph_PathTracer():
         'model_path': model_path,
         'batchSize': 4096,
         'networkInputLength': 43,
-        'directory': "F:\EventCamera\..\Dataset\BistroInterior_Wine\\bin",
+        'directory': "F:\EventCamera\..\Dataset\classroom\\bin",
         'tau': 1000.0,
         'threshold': 1.0,
     })
@@ -45,4 +45,4 @@ try: m.addGraph(PathTracer)
 except NameError: None
 
 m.clock.timeScale = 1000
-m.clock.exitFrame = 1280000
+m.clock.exitFrame = 640000
