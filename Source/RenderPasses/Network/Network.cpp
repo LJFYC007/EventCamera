@@ -172,6 +172,12 @@ Network::Network(ref<Device> pDevice, const Properties& props) : RenderPass(pDev
     }
     config->addOptimizationProfile(optProfile);
     config->setBuilderOptimizationLevel(5);
+    config->setMaxAuxStreams(numAuxStreams);
+    config->setFlag(nvinfer1::BuilderFlag::kGPU_FALLBACK);
+    config->setFlag(nvinfer1::BuilderFlag::kPREFER_PRECISION_CONSTRAINTS);
+    config->setMemoryPoolLimit(nvinfer1::MemoryPoolType::kWORKSPACE, 1ULL << 33);
+    config->setMemoryPoolLimit(nvinfer1::MemoryPoolType::kTACTIC_SHARED_MEMORY, 1ULL << 30);
+    config->setTilingOptimizationLevel(nvinfer1::TilingOptimizationLevel::kFULL);
 
     /*
     config->setFlag(nvinfer1::BuilderFlag::kTF32);
@@ -190,12 +196,8 @@ Network::Network(ref<Device> pDevice, const Properties& props) : RenderPass(pDev
         network->getOutput(i)->setType(nvinfer1::DataType::kHALF);
     Falcor::logInfo("Use FP16");
 
-    mpStream.resize(streamCnt);
-    for (uint i = 0; i < streamCnt; ++i)
-    {
-        checkCudaErrorCode(cudaStreamCreate(&mpStream[i]));
-        config->setProfileStream(mpStream[i]);
-    }
+    checkCudaErrorCode(cudaStreamCreate(&profileStream));
+    config->setProfileStream(profileStream);
 
     // Build the engine
     // If this call fails, it is suggested to increase the logger verbosity to
@@ -232,21 +234,21 @@ Network::Network(ref<Device> pDevice, const Properties& props) : RenderPass(pDev
         throw std::runtime_error(errMsg);
     }
 
-    mpContext.resize(streamCnt);
-    mpEngine.resize(streamCnt);
-    for (uint i = 0; i < streamCnt; ++i)
-    {
-        mpEngine[i] = std::unique_ptr<nvinfer1::ICudaEngine>(mpRuntime->deserializeCudaEngine(plan->data(), plan->size()));
-        if (mpEngine[i].get() == nullptr)
-            logFatal("engine is null");
+    auxStreams.resize(numAuxStreams);
+    for (int j = 0; j < numAuxStreams; j++)
+        checkCudaErrorCode(cudaStreamCreate(&auxStreams[j]));
+    mpEngine = std::unique_ptr<nvinfer1::ICudaEngine>(mpRuntime->deserializeCudaEngine(plan->data(), plan->size()));
+    if (mpEngine.get() == nullptr)
+        logFatal("engine is null");
 
-        mpContext[i] = std::unique_ptr<nvinfer1::IExecutionContext>(mpEngine[i]->createExecutionContext());
-        if (mpContext[i].get() == nullptr)
-            logFatal("context is null");
-    }
+    mpContext = std::unique_ptr<nvinfer1::IExecutionContext>(mpEngine->createExecutionContext());
+    if (mpContext.get() == nullptr)
+        logFatal("context is null");
+
+    mpContext->setAuxStreams(auxStreams.data(), numAuxStreams);
 
     FALCOR_CHECK(1 == network->getNbOutputs(), "output tensor number mismatch!");
-    auto name = mpEngine[0]->getIOTensorName(mpEngine[0]->getNbIOTensors() - 1);
+    auto name = mpEngine->getIOTensorName(mpEngine->getNbIOTensors() - 1);
     Falcor::logInfo("output tensor name {} is {}", 0, name);
     mpOutputNames.push_back(name);
 }
@@ -323,21 +325,19 @@ void Network::execute(RenderContext* pRenderContext, const RenderData& renderDat
     auto inference_start_time = std::chrono::high_resolution_clock::now();
     for (uint i = 0; i < numPatches; i++)
     {
-        uint id = i % streamCnt;
         void* inputAddr = base_input_ptr + i * networkInputLength * batchSize;
-        bool res = mpContext[id]->setTensorAddress(mpInputNames[0].c_str(), inputAddr);
+        bool res = mpContext->setTensorAddress(mpInputNames[0].c_str(), inputAddr);
         if (!res)
             logFatal("Set input tensor {} address failed!", mpInputNames[0]);
 
         void* outputAddr = base_output_ptr + i * batchSize;
-        res = mpContext[id]->setTensorAddress(mpOutputNames[0].c_str(), outputAddr);
+        res = mpContext->setTensorAddress(mpOutputNames[0].c_str(), outputAddr);
         if (!res)
             logFatal("Set output tensor address failed!");
 
-        mpContext[id]->enqueueV3(mpStream[id]);
+        mpContext->enqueueV3(profileStream);
     }
-    for (uint i = 0; i < streamCnt; i++)
-        checkCudaErrorCode(cudaStreamSynchronize(mpStream[i]));
+    checkCudaErrorCode(cudaStreamSynchronize(profileStream));
 
     auto inference_end_time = std::chrono::high_resolution_clock::now();
 
@@ -398,6 +398,5 @@ void Network::renderUI(Gui::Widgets& widget) {}
 
 Network::~Network()
 {
-    for (uint i = 0; i < streamCnt; i++)
-        checkCudaErrorCode(cudaStreamDestroy(mpStream[i]));
+    checkCudaErrorCode(cudaStreamDestroy(profileStream));
 }

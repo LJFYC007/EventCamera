@@ -1,6 +1,6 @@
 from falcor import *
 
-model_path = "F:\\EventCamera\\config\\final_model_v2_log_e24.onnx"
+model_path = "F:\\EventCamera\\config\\final_v2.onnx"
 
 def render_graph_PathTracer():
     g = RenderGraph("PathTracer")
