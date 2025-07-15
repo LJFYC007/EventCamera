@@ -1,7 +1,5 @@
 from falcor import *
 
-model_path = "F:\\EventCamera\\config\\final_model_v2_log_e24.onnx"
-
 def render_graph_PathTracer():
     g = RenderGraph("PathTracer")
     PathTracer = createPass("PathTracer", {
@@ -20,29 +18,20 @@ def render_graph_PathTracer():
     g.addEdge("VBufferRT.mvec", "PathTracer.mvec")
     g.addEdge("PathTracer.color", "AccumulatePass.input")
 
-    Network = createPass("Network", {
-        'accumulatePass': 64,
-        'model_path': model_path,
-        'batchSize': 4096,
-        'networkInputLength': 43,
-        'directory': "F:\EventCamera\..\Dataset\staircase\\bin",
-        'tau': 1000.0,
-        'threshold': 1.0,
+    DenoisePass = createPass("DenoisePass", {
+        'accumulatePass': $ACCUMULATE_PASS$,
+        'directory': "$DIRECTORY$\\denoise",
     })
-    g.addPass(Network, "Network")
+    g.addPass(DenoisePass, "DenoisePass")
 
-    g.addEdge("AccumulatePass.output", "Network.input")
-    g.markOutput("Network.output")
-
-    # g.markOutput("AccumulatePass.output")
-    # g.markOutput("PathTracer.DI")
-    # g.markOutput("PathTracer.GI")
-
+    g.addEdge("AccumulatePass.output", "DenoisePass.input")
+    g.markOutput("DenoisePass.output")
+    g.markOutput("DenoisePass.color")
     return g
 
 PathTracer = render_graph_PathTracer()
 try: m.addGraph(PathTracer)
 except NameError: None
 
-m.clock.timeScale = 1000
-m.clock.exitFrame = 640000
+m.clock.timeScale = $NETWORK_TIME_SCALE$
+m.clock.exitFrame = $NETWORK_EXIT_FRAME$
