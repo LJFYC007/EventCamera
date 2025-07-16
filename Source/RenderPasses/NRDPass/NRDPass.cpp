@@ -479,7 +479,7 @@ void NRDPass::reinit()
     denoiserCreationDesc.memoryAllocatorInterface.Allocate = nrdAllocate;
     denoiserCreationDesc.memoryAllocatorInterface.Reallocate = nrdReallocate;
     denoiserCreationDesc.memoryAllocatorInterface.Free = nrdFree;
-    denoiserCreationDesc.requestedMethodNum = 1;
+    denoiserCreationDesc.requestedMethodsNum = 1;
     denoiserCreationDesc.requestedMethods = methods;
 
     nrd::Result res = nrd::CreateDenoiser(denoiserCreationDesc, mpDenoiser);
@@ -505,40 +505,40 @@ void NRDPass::createPipelines()
     // Create samplers descriptor layout and set.
     D3D12DescriptorSetLayout SamplersDescriptorSetLayout;
 
-    for (uint32_t j = 0; j < denoiserDesc.staticSamplerNum; j++)
+    for (uint32_t j = 0; j < denoiserDesc.samplersNum; j++)
     {
-        SamplersDescriptorSetLayout.addRange(ShaderResourceType::Sampler, denoiserDesc.staticSamplers[j].registerIndex, 1);
+        SamplersDescriptorSetLayout.addRange(ShaderResourceType::Sampler, static_cast<uint32_t>(denoiserDesc.samplers[j]), 1);
     }
     mpSamplersDescriptorSet =
         D3D12DescriptorSet::create(mpDevice, SamplersDescriptorSetLayout, D3D12DescriptorSetBindingUsage::ExplicitBind);
 
     // Set sampler descriptors right away.
-    for (uint32_t j = 0; j < denoiserDesc.staticSamplerNum; j++)
+    for (uint32_t j = 0; j < denoiserDesc.samplersNum; j++)
     {
         mpSamplersDescriptorSet->setSampler(0, j, mpSamplers[j].get());
     }
 
     // Go over NRD passes and creating descriptor sets, root signatures and PSOs for each.
-    for (uint32_t i = 0; i < denoiserDesc.pipelineNum; i++)
+    for (uint32_t i = 0; i < denoiserDesc.pipelinesNum; i++)
     {
         const nrd::PipelineDesc& nrdPipelineDesc = denoiserDesc.pipelines[i];
-        const nrd::ComputeShader& nrdComputeShader = nrdPipelineDesc.computeShaderDXIL;
+        const nrd::ComputeShaderDesc& nrdComputeShaderDesc = nrdPipelineDesc.computeShaderDXIL;
 
         // Initialize descriptor set.
         D3D12DescriptorSetLayout CBVSRVUAVdescriptorSetLayout;
 
         // Add constant buffer to descriptor set.
-        CBVSRVUAVdescriptorSetLayout.addRange(ShaderResourceType::Cbv, denoiserDesc.constantBufferDesc.registerIndex, 1);
+        CBVSRVUAVdescriptorSetLayout.addRange(ShaderResourceType::Cbv, denoiserDesc.constantBufferRegisterIndex, 1);
 
-        for (uint32_t j = 0; j < nrdPipelineDesc.descriptorRangeNum; j++)
+        for (uint32_t j = 0; j < nrdPipelineDesc.resourceRangesNum; j++)
         {
-            const nrd::DescriptorRangeDesc& nrdDescriptorRange = nrdPipelineDesc.descriptorRanges[j];
+            const nrd::ResourceRangeDesc& nrdDescriptorRange = nrdPipelineDesc.resourceRanges[j];
 
             ShaderResourceType descriptorType = nrdDescriptorRange.descriptorType == nrd::DescriptorType::TEXTURE
                                                     ? ShaderResourceType::TextureSrv
                                                     : ShaderResourceType::TextureUav;
 
-            CBVSRVUAVdescriptorSetLayout.addRange(descriptorType, nrdDescriptorRange.baseRegisterIndex, nrdDescriptorRange.descriptorNum);
+            CBVSRVUAVdescriptorSetLayout.addRange(descriptorType, nrdDescriptorRange.baseRegisterIndex, nrdDescriptorRange.descriptorsNum);
         }
 
         mCBVSRVUAVdescriptorSetLayouts.push_back(CBVSRVUAVdescriptorSetLayout);
@@ -596,13 +596,13 @@ void NRDPass::createResources()
     const uint32_t poolSize = denoiserDesc.permanentPoolSize + denoiserDesc.transientPoolSize;
 
     // Create samplers.
-    for (uint32_t i = 0; i < denoiserDesc.staticSamplerNum; i++)
+    for (uint32_t i = 0; i < denoiserDesc.samplersNum; i++)
     {
-        const nrd::StaticSamplerDesc& nrdStaticsampler = denoiserDesc.staticSamplers[i];
+        const nrd::Sampler& nrdStaticsampler = denoiserDesc.samplers[i];
         Sampler::Desc samplerDesc;
         samplerDesc.setFilterMode(TextureFilteringMode::Linear, TextureFilteringMode::Linear, TextureFilteringMode::Point);
 
-        if (nrdStaticsampler.sampler == nrd::Sampler::NEAREST_CLAMP || nrdStaticsampler.sampler == nrd::Sampler::LINEAR_CLAMP)
+        if (nrdStaticsampler == nrd::Sampler::NEAREST_CLAMP || nrdStaticsampler == nrd::Sampler::LINEAR_CLAMP)
         {
             samplerDesc.setAddressingMode(TextureAddressingMode::Clamp, TextureAddressingMode::Clamp, TextureAddressingMode::Clamp);
         }
@@ -611,7 +611,7 @@ void NRDPass::createResources()
             samplerDesc.setAddressingMode(TextureAddressingMode::Mirror, TextureAddressingMode::Mirror, TextureAddressingMode::Mirror);
         }
 
-        if (nrdStaticsampler.sampler == nrd::Sampler::NEAREST_CLAMP || nrdStaticsampler.sampler == nrd::Sampler::NEAREST_MIRRORED_REPEAT)
+        if (nrdStaticsampler == nrd::Sampler::NEAREST_CLAMP || nrdStaticsampler == nrd::Sampler::NEAREST_MIRRORED_REPEAT)
         {
             samplerDesc.setFilterMode(TextureFilteringMode::Point, TextureFilteringMode::Point, TextureFilteringMode::Point);
         }
@@ -751,8 +751,8 @@ void NRDPass::executeInternal(RenderContext* pRenderContext, const RenderData& r
     // Run NRD dispatches.
     const nrd::DispatchDesc* dispatchDescs = nullptr;
     uint32_t dispatchDescNum = 0;
-    nrd::Result result = nrd::GetComputeDispatches(*mpDenoiser, mCommonSettings, dispatchDescs, dispatchDescNum);
-    FALCOR_ASSERT(result == nrd::Result::SUCCESS);
+    nrd::GetComputeDispatches(*mpDenoiser, mCommonSettings, dispatchDescs, dispatchDescNum);
+
 
     for (uint32_t i = 0; i < dispatchDescNum; i++)
     {
@@ -784,17 +784,17 @@ void NRDPass::dispatch(RenderContext* pRenderContext, const RenderData& renderDa
 
     // Set CBV.
     mpCBV = D3D12ConstantBufferView::create(mpDevice, cbAllocation.getGpuAddress(), cbAllocation.size);
-    CBVSRVUAVDescriptorSet->setCbv(0 /* NB: range #0 is CBV range */, denoiserDesc.constantBufferDesc.registerIndex, mpCBV.get());
+    CBVSRVUAVDescriptorSet->setCbv(0 /* NB: range #0 is CBV range */, denoiserDesc.constantBufferRegisterIndex, mpCBV.get());
 
     uint32_t resourceIndex = 0;
-    for (uint32_t descriptorRangeIndex = 0; descriptorRangeIndex < pipelineDesc.descriptorRangeNum; descriptorRangeIndex++)
+    for (uint32_t descriptorRangeIndex = 0; descriptorRangeIndex < pipelineDesc.resourceRangesNum; descriptorRangeIndex++)
     {
-        const nrd::DescriptorRangeDesc& nrdDescriptorRange = pipelineDesc.descriptorRanges[descriptorRangeIndex];
+        const nrd::ResourceRangeDesc& nrdDescriptorRange = pipelineDesc.resourceRanges[descriptorRangeIndex];
 
-        for (uint32_t descriptorOffset = 0; descriptorOffset < nrdDescriptorRange.descriptorNum; descriptorOffset++)
+        for (uint32_t descriptorOffset = 0; descriptorOffset < nrdDescriptorRange.descriptorsNum; descriptorOffset++)
         {
             FALCOR_ASSERT(resourceIndex < dispatchDesc.resourceNum);
-            const nrd::Resource& resource = dispatchDesc.resources[resourceIndex];
+            const nrd::ResourceDesc& resource = dispatchDesc.resources[resourceIndex];
 
             FALCOR_ASSERT(resource.stateNeeded == nrdDescriptorRange.descriptorType);
 
