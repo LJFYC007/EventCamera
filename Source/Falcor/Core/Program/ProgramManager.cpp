@@ -107,6 +107,8 @@ ProgramManager::ProgramManager(Device* pDevice) : mpDevice(pDevice)
         {"FALCOR_NVAPI_AVAILABLE", (FALCOR_NVAPI_AVAILABLE && mpDevice->getType() == Device::Type::D3D12) ? "1" : "0"},
 #if FALCOR_NVAPI_AVAILABLE
         {"NV_SHADER_EXTN_SLOT", "u999"},
+        {"NRD_NORMAL_ENCODING", "2"},
+        {"NRD_ROUGHNESS_ENCODING", "1"},
         {"__SHADER_TARGET_MAJOR", std::to_string(getShaderModelMajorVersion(mpDevice->getSupportedShaderModel()))},
         {"__SHADER_TARGET_MINOR", std::to_string(getShaderModelMinorVersion(mpDevice->getSupportedShaderModel()))},
 #endif
