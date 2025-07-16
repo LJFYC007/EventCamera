@@ -4,14 +4,12 @@ def render_graph_PathTracerNRD():
     g = RenderGraph("PathTracerNRD")
     GBufferRT = createPass("GBufferRT", {'samplePattern': 'Halton', 'sampleCount': 32, 'useAlphaTest': True})
     g.addPass(GBufferRT, "GBufferRT")
-    PathTracer = createPass("PathTracer", {'samplesPerPixel': 1, 'maxSurfaceBounces': 10, 'useRussianRoulette': True})
+    PathTracer = createPass("PathTracer", {'samplesPerPixel': 16, 'maxTransmissionBounces': 0})
     g.addPass(PathTracer, "PathTracer")
 
     # Reference path passes
     AccumulatePass = createPass("AccumulatePass", {'enabled': True, 'precisionMode': 'Single'})
     g.addPass(AccumulatePass, "AccumulatePass")
-    ToneMapperReference = createPass("ToneMapper", {'autoExposure': False, 'exposureCompensation': 0.0})
-    g.addPass(ToneMapperReference, "ToneMapperReference")
 
     # NRD path passes
     NRDDiffuseSpecular = createPass("NRD", {'maxIntensity': 250.0})
@@ -30,15 +28,12 @@ def render_graph_PathTracerNRD():
     g.addPass(ModulateIllumination, "ModulateIllumination")
     DLSS = createPass("DLSSPass", {'enabled': True, 'profile': 'Balanced', 'motionVectorScale': 'Relative', 'isHDR': True, 'sharpness': 0.0, 'exposure': 0.0})
     g.addPass(DLSS, "DLSS")
-    ToneMapperNRD = createPass("ToneMapper", {'autoExposure': False, 'exposureCompensation': 0.0})
-    g.addPass(ToneMapperNRD, "ToneMapperNRD")
 
     g.addEdge("GBufferRT.vbuffer",                                      "PathTracer.vbuffer")
     g.addEdge("GBufferRT.viewW",                                        "PathTracer.viewW")
 
     # Reference path graph
     g.addEdge("PathTracer.color",                                       "AccumulatePass.input")
-    g.addEdge("AccumulatePass.output",                                  "ToneMapperReference.src")
 
     # NRD path graph
     g.addEdge("PathTracer.nrdDiffuseRadianceHitDist",                   "NRDDiffuseSpecular.diffuseRadianceHitDist")
@@ -83,11 +78,10 @@ def render_graph_PathTracerNRD():
     g.addEdge("GBufferRT.linearZ",                                      "DLSS.depth")
     g.addEdge("ModulateIllumination.output",                            "DLSS.color")
 
-    g.addEdge("DLSS.output",                                            "ToneMapperNRD.src")
 
     # Outputs
-    g.markOutput("ToneMapperNRD.dst")
-    g.markOutput("ToneMapperReference.dst")
+    g.markOutput("DLSS.output")
+    g.markOutput("AccumulatePass.output")
 
     return g
 
@@ -95,3 +89,4 @@ PathTracerNRD = render_graph_PathTracerNRD()
 try: m.addGraph(PathTracerNRD)
 except NameError: None
 
+m.clock.timeScale = 1000
