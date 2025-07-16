@@ -4,7 +4,7 @@ def render_graph_PathTracerNRD():
     g = RenderGraph("PathTracerNRD")
     GBufferRT = createPass("GBufferRT", {'samplePattern': 'Halton', 'sampleCount': 32, 'useAlphaTest': True})
     g.addPass(GBufferRT, "GBufferRT")
-    PathTracer = createPass("PathTracer", {'samplesPerPixel': 16, 'maxTransmissionBounces': 0})
+    PathTracer = createPass("PathTracer", {'samplesPerPixel': 64, 'maxTransmissionBounces': 0})
     g.addPass(PathTracer, "PathTracer")
 
     # Reference path passes
@@ -78,10 +78,18 @@ def render_graph_PathTracerNRD():
     g.addEdge("GBufferRT.linearZ",                                      "DLSS.depth")
     g.addEdge("ModulateIllumination.output",                            "DLSS.color")
 
+    DenoisePass = createPass("DenoisePass", {
+        'accumulatePass': 1,
+        'directory': "F:\EventCamera\..\Dataset\classroom\\nrd",
+    })
+    g.addPass(DenoisePass, "DenoisePass")
 
     # Outputs
-    g.markOutput("DLSS.output")
-    g.markOutput("AccumulatePass.output")
+    # g.markOutput("DLSS.output")
+    g.addEdge("DLSS.output", "DenoisePass.input")
+    g.markOutput("DenoisePass.output")
+    g.markOutput("DenoisePass.color")
+    # g.markOutput("AccumulatePass.output")
 
     return g
 
@@ -90,3 +98,4 @@ try: m.addGraph(PathTracerNRD)
 except NameError: None
 
 m.clock.timeScale = 1000
+m.clock.exitFrame = 10000

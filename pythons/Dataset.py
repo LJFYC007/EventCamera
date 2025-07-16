@@ -39,10 +39,12 @@ def run(args, scene_index):
     network_script = os.path.join(root_dir, 'scripts', f"Network.py")
     denoise_script = os.path.join(root_dir, 'scripts', f"Denoise.py")
     optix_denoise_script = os.path.join(root_dir, 'scripts', f"OptixDenoise.py")
+    nrd_denoise_script = os.path.join(root_dir, 'scripts', f"NRD.py")
     dataset_template_path = os.path.join(root_dir, 'scripts', 'DatasetScriptTemplate.py')
     network_template_path = os.path.join(root_dir, 'scripts', 'NetworkScriptTemplate.py')
     denoise_template_path = os.path.join(root_dir, 'scripts', 'DenoiseScriptTemplate.py')
     optix_denoise_template_path = os.path.join(root_dir, 'scripts', 'OptixDenoiseScriptTemplate.py')
+    nrd_denoise_template_path = os.path.join(root_dir, 'scripts', 'NRDScriptTemplate.py')
 
     # Extract parameters from config
     samples_per_pixel = script_config.get('samplesPerPixel', 8)
@@ -74,6 +76,8 @@ def run(args, scene_index):
         os.makedirs(os.path.join(directory, 'denoise'))
     if not os.path.exists(os.path.join(directory, 'optix')):
         os.makedirs(os.path.join(directory, 'optix'))
+    if not os.path.exists(os.path.join(directory, 'nrd')):
+        os.makedirs(os.path.join(directory, 'nrd'))
 
     parameters = {
         "SAMPLES_PER_PIXEL": samples_per_pixel,
@@ -99,6 +103,7 @@ def run(args, scene_index):
     TemplateInstantiate.instantiate_template(network_template_path, network_script, parameters)
     TemplateInstantiate.instantiate_template(denoise_template_path, denoise_script, parameters)
     TemplateInstantiate.instantiate_template(optix_denoise_template_path, optix_denoise_script, parameters)
+    TemplateInstantiate.instantiate_template(nrd_denoise_template_path, nrd_denoise_script, parameters)
 
     verbosity = config.get('verbosity', 2)
     assert(verbosity in [0, 1, 2, 3, 4, 5])
@@ -173,7 +178,7 @@ def run(args, scene_index):
 
     npz_python = os.path.join(root_dir, 'pythons', 'npz.py')
     input_dir = os.path.join(directory, 'denoise')
-    cmd = ["python", npz_python, "--input_dir", input_dir, "--width", str(width), "--height", str(height), "--save_npz"]
+    cmd = ["python", npz_python, "--input_dir", input_dir, "--width", str(width), "--height", str(height), "--save_npz", "--name", 'denoise']
 
     try:
         print(f"Running npz: {' '.join(cmd)}")
@@ -207,7 +212,40 @@ def run(args, scene_index):
 
     npz_python = os.path.join(root_dir, 'pythons', 'npz.py')
     input_dir = os.path.join(directory, 'optix')
-    cmd = ["python", npz_python, "--input_dir", input_dir, "--width", str(width), "--height", str(height), "--save_npz"]
+    cmd = ["python", npz_python, "--input_dir", input_dir, "--width", str(width), "--height", str(height), "--save_npz", "--name", 'optix-temporal']
+
+    try:
+        print(f"Running npz: {' '.join(cmd)}")
+        start_time = time.time()
+        process = subprocess.Popen(cmd)
+        process.wait()
+        execution_time = time.time() - start_time
+        print(f"Execution completed successfully in {execution_time:.2f} seconds ({execution_time/60:.2f} minutes).")
+    except FileNotFoundError:
+        print(f"Error: npz.py not found at path: {npz_python}")
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+
+    # ------------------------- nrd denoise -----------------------------
+    cmd = [mogwai_path, f"--script={nrd_denoise_script}", f"--scene={scene}", f"--verbosity={verbosity}", "--deferred", f"--width={width}", f"--height={height}"]
+    if config.get('headless', False):
+        cmd.append("--headless")
+
+    try:
+        print(f"Running NRD Denoise: {' '.join(cmd)}")
+        start_time = time.time()
+        process = subprocess.Popen(cmd)
+        process.wait()
+        execution_time = time.time() - start_time
+        print(f"Execution completed successfully in {execution_time:.2f} seconds ({execution_time/60:.2f} minutes).")
+    except FileNotFoundError:
+        print(f"Error: Mogwai.exe not found at path: {mogwai_path}")
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+
+    npz_python = os.path.join(root_dir, 'pythons', 'npz.py')
+    input_dir = os.path.join(directory, 'nrd')
+    cmd = ["python", npz_python, "--input_dir", input_dir, "--width", str(width), "--height", str(height), "--save_npz", "--name", 'nrd']
 
     try:
         print(f"Running npz: {' '.join(cmd)}")

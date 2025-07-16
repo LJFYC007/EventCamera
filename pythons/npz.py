@@ -16,7 +16,7 @@ def load_events(file_path, width):
     x = addr % width
     return x, y, timestamps, polarity
 
-def process_files(input_dir, pattern, width, height, save_npz, show):
+def process_files(input_dir, pattern, width, height, save_npz, show, name):
     files = sorted(Path(input_dir).glob(pattern), key=lambda f: int(re.findall(r'\d+', f.stem)[0]))
 
     all_x = []
@@ -52,7 +52,7 @@ def process_files(input_dir, pattern, width, height, save_npz, show):
         t_all = np.concatenate(all_t)
         p_all = np.concatenate(all_p)
 
-        output_file = Path(input_dir).parent / 'events-optix-temporal.npz'
+        output_file = Path(input_dir).parent / f'events-{name}.npz'
         np.savez(output_file, t=t_all, x=x_all, y=y_all, p=p_all)
         print(f"Saved merged events to {output_file}")
 
@@ -66,8 +66,9 @@ def main():
     parser.add_argument('--height', type=int, default=720, help='Sensor height in pixels')
     parser.add_argument('--save_npz', action='store_true', help='Flag to save extracted events as .npz')
     parser.add_argument('--show', action='store_true', help='Flag to show images')
+    parser.add_argument('--name', type=str, default='default', help='Name for the output .npz file')
     args = parser.parse_args()
-    process_files(args.input_dir, args.pattern, args.width, args.height, args.save_npz, args.show)
+    process_files(args.input_dir, args.pattern, args.width, args.height, args.save_npz, args.show, args.name)
 
 if __name__ == '__main__':
     main()
