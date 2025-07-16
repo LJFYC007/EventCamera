@@ -89,7 +89,7 @@ private:
     std::chrono::duration<double> mElapsedTime{0.0};
     double mTimePeriod = 0.0;
     uint32_t mCallCounter = 0;       // Counter to track calls to update()
-    uint mMaxAccumulated = 64;
+    uint mMaxAccumulated = 1;
 };
 
 /*

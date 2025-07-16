@@ -76,6 +76,9 @@ private:
     /// Accumulate Pass Frames
     uint32_t mAccumulatePass = 1;
 
+    /// Window size
+    uint32_t mWindowSize = 1;
+
     ref<Texture> mpLastFrames[10];
     ref<Texture> mpInternalState;
 };

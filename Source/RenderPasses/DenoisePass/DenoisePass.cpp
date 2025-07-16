@@ -44,6 +44,7 @@ const std::string kColorChannelEventImage = "color";
 const std::string kOutputChannelEventImage = "output";
 const std::string kAccumulatePass = "accumulatePass";
 const std::string kDirectory = "directory";
+const std::string kWindow = "window";
 } // namespace
 
 DenoisePass::DenoisePass(ref<Device> pDevice, const Properties& props) : RenderPass(pDevice)
@@ -52,6 +53,8 @@ DenoisePass::DenoisePass(ref<Device> pDevice, const Properties& props) : RenderP
     {
         if (key == kAccumulatePass)
             mAccumulatePass = value;
+        else if (key == kWindow)
+            mWindowSize = value;
         else if (key == kDirectory)
             mDirectoryPath = props.get<std::string>(key);
         else
@@ -63,6 +66,7 @@ Properties DenoisePass::getProperties() const
 {
     Properties props;
     props[kAccumulatePass] = mAccumulatePass;
+    props[kWindow] = mWindowSize;
     props[kDirectory] = mDirectoryPath;
     return props;
 }
@@ -117,7 +121,8 @@ void DenoisePass::execute(RenderContext* pRenderContext, const RenderData& rende
     vars["color"] = renderData.getTexture(kColorChannelEventImage);
     vars["output"] = renderData.getTexture(kOutputChannelEventImage);
     vars["PerFrameCB"]["gResolution"] = mFrameDim;
-    vars["PerFrameCB"]["gFrame"] = mFrame - 5;
+    vars["PerFrameCB"]["gFrame"] = mFrame - mWindowSize / 2;
+    vars["PerFrameCB"]["gWindow"] = mWindowSize;
     for (int i = 0; i < 10; ++ i)
         vars["LastFrames"][i] = mpLastFrames[i];
     pRenderContext->clearUAVCounter(mpCompressBuffer, 0);

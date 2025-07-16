@@ -20,7 +20,8 @@ def render_graph_PathTracer():
 
     DenoisePass = createPass("DenoisePass", {
         'accumulatePass': 64,
-        'directory': "F:\EventCamera\..\Dataset\staircase\\denoise",
+        'directory': "F:\EventCamera\..\Dataset\classroom\\denoise",
+        "window": 10,
     })
     g.addPass(DenoisePass, "DenoisePass")
 

@@ -9,6 +9,7 @@ cbuffer PerFrameCB
 {
     uint2 gResolution;
     uint gFrame;
+    uint gWindow;
 }
 
 [numthreads(32, 32, 1)]
@@ -18,14 +19,14 @@ void main(uint3 dispatchThreadID: SV_DispatchThreadID)
     if (dispatchThreadID.x < gResolution.x && dispatchThreadID.y < gResolution.y)
     {
         uint2 pixel = uint2(dispatchThreadID.xy);
-        for (int i = 0; i + 1 < 10; ++i)
+        for (int i = 0; i + 1 < gWindow; ++i)
             LastFrames[i][pixel] = LastFrames[i + 1][pixel];
-        LastFrames[9][pixel] = input[pixel];
+        LastFrames[gWindow - 1][pixel] = input[pixel];
 
         color[pixel] = float4(0.f);
-        for (int i = 0; i < 10; ++i)
+        for (int i = 0; i < gWindow; ++i)
             color[pixel] += LastFrames[i][pixel];
-        color[pixel] /= 10.f;
+        color[pixel] /= float(gWindow);
 
         float x = (0.2126f * color[pixel].r + 0.7152f * color[pixel].g + 0.0722f * color[pixel].b) * 255.f;
         float threshold = 3.f;

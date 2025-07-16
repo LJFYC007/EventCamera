@@ -25,7 +25,7 @@ def render_graph_PathTracer():
         'model_path': model_path,
         'batchSize': 4096,
         'networkInputLength': 43,
-        'directory': "F:\EventCamera\..\Dataset\staircase\\bin",
+        'directory': "F:\EventCamera\..\Dataset\classroom\\bin",
         'tau': 1000.0,
         'threshold': 1.0,
     })
